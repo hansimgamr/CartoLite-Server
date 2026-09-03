@@ -450,8 +450,17 @@ async function start(): Promise<void> {
     // the engine emits rather than trusted, and a node that is not in the
     // current snapshot simply leaves the saved or home view alone.
     const deepLinked = nodeIDFromHash(location.hash);
-    if (deepLinked && liveMap.selectNodeByID(deepLinked, true)) {
-      mapElement.dataset.viewSource = 'deep-link';
+    if (deepLinked) {
+      // The map discards state until its style and layers exist, so on a cold
+      // load the node index is still empty here and selecting always fails.
+      // Try now for a warm map, and otherwise once MapLibre has settled — by
+      // then the layers-ready path has re-rendered the snapshot.
+      const applyDeepLink = (): boolean => {
+        if (!liveMap.selectNodeByID(deepLinked, true)) return false;
+        mapElement.dataset.viewSource = 'deep-link';
+        return true;
+      };
+      if (!applyDeepLink()) liveMap.map.once('idle', () => { applyDeepLink(); });
     }
 
     liveMap.map.on('moveend', () => {
