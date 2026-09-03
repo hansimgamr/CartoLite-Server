@@ -18,6 +18,13 @@ optional and default to upstream behaviour.
   since node ids are one-way hashes; the label is encoded, not interpolated.
 - Accept a `#node=<id>` fragment to open on a given node, validated against the
   id shape the engine emits and applied once the map reports `idle`.
+- Add `HOME_BOUNDS` (`west,south,east,north`), pinning the home view and the
+  Reset button to one region instead of fitting the bounding box of every node
+  heard, which drifts as distant nodes appear and expire. Bounds rather than a
+  centre and zoom, so `fitBounds` keeps the framing right on a phone too.
+- Default the heat and cluster layers to off. Both are summaries that, at one
+  region's scale, cover the individual nodes and routes a reader came for. A
+  stored per-visitor choice still wins.
 - Title the browser tab `CartoQuinte`.
 
 ## 0.1.0 - 2026-09-02

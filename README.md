@@ -29,14 +29,21 @@
 > `map.hansimgamr.net`, alongside the status console at
 > `mesh.hansimgamr.net` ([`hansimgamr/am-i-connected`](https://github.com/hansimgamr/am-i-connected)).
 >
-> Branch `quinte-deployment` adds two optional settings, both off by default so
-> upstream behaviour is unchanged when neither is set:
+> Branch `quinte-deployment` adds three optional settings, all off by default so
+> upstream behaviour is unchanged when none is set, plus two changed layer
+> defaults:
 >
 > - `CARTO_TILE_BASE` — serve CARTO geography through a reverse proxy on your
 >   own origin that appends the key server-side, so no credential is compiled
 >   into the frontend and the page makes no third-party request for tiles.
 > - `STATUS_CONSOLE_ORIGIN` — link a companion status site from the topbar and
 >   each node inspector, plus a `#node=<id>` deep link into the map.
+> - `HOME_BOUNDS` — pin the home view to one region instead of fitting every
+>   node heard.
+>
+> Heat and clusters also default to off here: at one region's scale they cover
+> the individual nodes and routes a reader came to look at. Both stay one tap
+> away, and a visitor's own stored choice always wins.
 >
 > See [Deployment](docs/deployment.md) for both. Everything else, including the
 > privacy boundary and the public API, is upstream's.

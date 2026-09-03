@@ -28,6 +28,9 @@ The BuildKit secret injects the browser-visible CARTO project key into the compi
 | `MQTT_INGEST_QUEUE_SIZE` | `4096` | Bounded queue, from 64 through 65536 |
 | `STATE_PATH` | `/data/state-v1.json` | Atomic checkpoint path |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error` |
+| `CARTO_TILE_BASE` | empty | Same-origin basemap proxy path; see below |
+| `STATUS_CONSOLE_ORIGIN` | empty | Companion status console to link to |
+| `HOME_BOUNDS` | empty | `west,south,east,north` home view for one region |
 
 `CARTO_BASEMAP_API_KEY_FILE` points Compose at the BuildKit secret file. Do not place the key in `.env`.
 
@@ -101,6 +104,40 @@ host but your own, and that the bundle contains no key.
 
 Topography and 3D still reach Mapterhorn directly, and only after a visitor
 enables them — the one remaining third-party request, and opt-in.
+
+## Home region (optional)
+
+By default the map opens on the bounding box of every node it has heard, which
+is right for a worldwide instance. An operator covering one region usually wants
+a fixed frame instead: the fitted box drifts as distant nodes appear and expire,
+so the map opens somewhere slightly different each visit and the Reset button
+lands somewhere different again.
+
+Set `HOME_BOUNDS` to `west,south,east,north`:
+
+```sh
+HOME_BOUNDS=-77.90,43.88,-76.85,44.35
+```
+
+Bounds rather than a centre and zoom on purpose — `fitBounds` derives the zoom
+from the viewport, so one setting frames the region correctly on a desktop and
+on a phone, where a fixed zoom would crop it. Malformed, reversed or
+out-of-range values are ignored and the worldwide fit is used, so a typo
+degrades to upstream behaviour rather than pointing the map at nothing.
+
+The value applies to the initial view and to the Reset control. A returning
+visitor's own saved view still takes precedence.
+
+## Layer defaults
+
+`DEFAULT_UI_PREFERENCES` in `web/src/preferences.ts` sets what a **first** visit
+shows. Anyone who has toggled a layer keeps their own stored choice, so changing
+these never overrides a visitor.
+
+This deployment ships heat and clusters off: both are summaries, and at one
+region's scale they largely cover the individual nodes and routes a reader came
+to look at. Upstream ships both on, which suits a worldwide view where the
+individual marks are too dense to read.
 
 ## Companion status console (optional)
 
