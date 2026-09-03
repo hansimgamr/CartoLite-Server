@@ -20,11 +20,23 @@ const CARTO_VECTOR_MINZOOM = 0;
 const CARTO_VECTOR_MAXZOOM = 14;
 const CARTO_BASEMAP_API_KEY = import.meta.env.VITE_CARTO_BASEMAP_API_KEY?.trim() ?? '';
 
+// MapLibre resolves tile URLs inside a Web Worker, whose own origin is a blob:
+// URL — a root-relative path there fails with "Failed to parse URL", and the
+// geography silently never loads. So a same-origin base is made absolute here,
+// on the main thread, where document origin is still known.
+export function absoluteTileBase(base: string, origin?: string): string {
+  const trimmed = base.trim().replace(/\/+$/, '');
+  if (trimmed === '' || /^https?:\/\//i.test(trimmed)) return trimmed;
+  const root = origin ?? (typeof location === 'undefined' ? '' : location.origin ?? '');
+  if (!root) return trimmed;
+  return `${root.replace(/\/+$/, '')}/${trimmed.replace(/^\/+/, '')}`;
+}
+
 export function cartoVectorStyle(
   apiKey = CARTO_BASEMAP_API_KEY,
   tileBase = CARTO_TILE_BASE,
 ): StyleSpecification {
-  const base = tileBase.trim().replace(/\/+$/, '');
+  const base = absoluteTileBase(tileBase);
   const proxied = base !== '';
   return {
     version: 8,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cartoVectorRequestURL, cartoVectorStyle } from './basemap';
+import { absoluteTileBase, cartoVectorRequestURL, cartoVectorStyle } from './basemap';
 
 describe('CARTO vector basemap', () => {
   it('contains only vector geography and no raster or PNG fallback', () => {
@@ -19,17 +19,18 @@ describe('CARTO vector basemap', () => {
   it('routes geography through a same-origin proxy without a browser-visible key', () => {
     const style = cartoVectorStyle('test key', '/carto-tiles');
     const serialized = JSON.stringify(style);
+    const origin = location.origin;
 
     // Inlined tiles, not a TileJSON url: CARTO's TileJSON answers with absolute
     // cartocdn.com tile URLs, which would bypass the proxy entirely.
     expect(style.sources.carto).toMatchObject({
       type: 'vector',
-      tiles: ['/carto-tiles/vectortiles/carto.streets/v1/{z}/{x}/{y}.mvt'],
+      tiles: [`${origin}/carto-tiles/vectortiles/carto.streets/v1/{z}/{x}/{y}.mvt`],
       minzoom: 0,
       maxzoom: 14
     });
     expect(style.sources.carto).not.toHaveProperty('url');
-    expect(style.glyphs).toBe('/carto-tiles/fonts/{fontstack}/{range}.pbf');
+    expect(style.glyphs).toBe(`${origin}/carto-tiles/fonts/{fontstack}/{range}.pbf`);
     // The whole point: no credential and no third-party host reach the browser.
     expect(serialized).not.toContain('test key');
     expect(serialized).not.toContain('test%20key');
@@ -37,9 +38,22 @@ describe('CARTO vector basemap', () => {
     expect(style.layers.some((layer) => layer.type === 'raster')).toBe(false);
   });
 
+  it('makes a same-origin base absolute, because MapLibre resolves tiles in a worker', () => {
+    // A root-relative URL reaching the worker fails with "Failed to parse URL"
+    // and the basemap silently never paints, so this is load-bearing.
+    expect(absoluteTileBase('/carto-tiles', 'https://map.example.net'))
+      .toBe('https://map.example.net/carto-tiles');
+    expect(absoluteTileBase('/carto-tiles/', 'https://map.example.net/'))
+      .toBe('https://map.example.net/carto-tiles');
+    // An operator may configure an absolute base already; leave it alone.
+    expect(absoluteTileBase('https://tiles.example.net/carto/', 'https://map.example.net'))
+      .toBe('https://tiles.example.net/carto');
+    expect(absoluteTileBase('', 'https://map.example.net')).toBe('');
+  });
+
   it('ignores a trailing slash on the proxy base so paths never double up', () => {
     const style = cartoVectorStyle('', '/carto-tiles/');
-    expect(style.glyphs).toBe('/carto-tiles/fonts/{fontstack}/{range}.pbf');
+    expect(style.glyphs).toBe(`${location.origin}/carto-tiles/fonts/{fontstack}/{range}.pbf`);
   });
 
   it('adds the browser-visible project key to CARTO PBF requests only once', () => {
