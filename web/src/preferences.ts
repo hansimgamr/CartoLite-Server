@@ -18,10 +18,14 @@ export interface UiPreferences {
 
 const VIEW_STORAGE_PREFIX = 'cartolite-server:view:v1';
 export const UI_STORAGE_KEY = 'cartolite-server:ui:v1';
+// Heat and clusters are summaries, and at one region's scale they mostly cover
+// the individual nodes and routes a reader came to look at. Both stay one tap
+// away. A visitor who has already toggled either keeps their own choice — this
+// is only what a first visit shows.
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   routes: false,
-  heatmap: true,
-  clusters: true,
+  heatmap: false,
+  clusters: false,
   hillshade: false,
   terrain3D: false,
   routeWindow: 'auto',

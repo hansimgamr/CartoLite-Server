@@ -28,6 +28,7 @@ import {
   labelSortKey,
   LIVE_FOLLOW_MIN_INTERVAL_MS,
   mapPixelRatio,
+  parseHomeBounds,
   mapGlyphLabel,
   neighborNodeIDs,
   NEIGHBOR_NODE_LAYER_ID,
@@ -745,3 +746,21 @@ function heatWeight(collection: ReturnType<typeof activityHeatCollection>, id: s
   if (!feature) throw new Error(`missing heat feature ${id}`);
   return Number(feature.properties?.weight);
 }
+
+describe('configured home bounds', () => {
+  it('accepts west,south,east,north and ignores anything malformed', () => {
+    expect(parseHomeBounds('-77.90,43.88,-76.85,44.35'))
+      .toEqual([[-77.9, 43.88], [-76.85, 44.35]]);
+    expect(parseHomeBounds(' -77.90 , 43.88 , -76.85 , 44.35 '))
+      .toEqual([[-77.9, 43.88], [-76.85, 44.35]]);
+    // Reversed, short, out of range, or not a string: fall back to the world
+    // fit rather than framing the map on nonsense.
+    expect(parseHomeBounds('-76.85,44.35,-77.90,43.88')).toBeNull();
+    expect(parseHomeBounds('-77.90,43.88,-76.85')).toBeNull();
+    expect(parseHomeBounds('-190,43.88,-76.85,44.35')).toBeNull();
+    expect(parseHomeBounds('-77.90,-90,-76.85,44.35')).toBeNull();
+    expect(parseHomeBounds('a,b,c,d')).toBeNull();
+    expect(parseHomeBounds(undefined)).toBeNull();
+    expect(parseHomeBounds('')).toBeNull();
+  });
+});

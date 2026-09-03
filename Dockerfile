@@ -5,14 +5,19 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY web/ ./
-# Two optional deployment settings, both plain build args because neither is a
+# Three optional deployment settings, all plain build args because none is a
 # credential:
-#   VITE_CARTO_TILE_BASE      same-origin path of a reverse proxy that appends
-#                             the CARTO key server-side. When set, no key is
-#                             compiled in and the browser never sees one.
+#   VITE_CARTO_TILE_BASE        same-origin path of a reverse proxy that
+#                               appends the CARTO key server-side. When set,
+#                               no key is compiled in and the browser never
+#                               sees one.
 #   VITE_STATUS_CONSOLE_ORIGIN  companion status console to link to, if any.
+#   VITE_HOME_BOUNDS            "west,south,east,north" home view for a
+#                               single-region deployment, instead of fitting
+#                               the bounding box of every node heard.
 ARG VITE_CARTO_TILE_BASE=""
 ARG VITE_STATUS_CONSOLE_ORIGIN=""
+ARG VITE_HOME_BOUNDS=""
 # CARTO issues this key for direct browser tile URLs. The secret mount keeps its
 # value out of source, build logs, and image metadata; it remains client-visible.
 # Leave the secret unset when VITE_CARTO_TILE_BASE is used.
@@ -20,6 +25,7 @@ RUN --mount=type=secret,id=carto_basemap_api_key,required=false \
     VITE_CARTO_BASEMAP_API_KEY="$(cat /run/secrets/carto_basemap_api_key 2>/dev/null || true)" \
     VITE_CARTO_TILE_BASE="$VITE_CARTO_TILE_BASE" \
     VITE_STATUS_CONSOLE_ORIGIN="$VITE_STATUS_CONSOLE_ORIGIN" \
+    VITE_HOME_BOUNDS="$VITE_HOME_BOUNDS" \
     npm run build
 
 FROM --platform=$BUILDPLATFORM golang:1.25.13-bookworm AS go-build

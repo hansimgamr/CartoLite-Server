@@ -11,6 +11,7 @@ services:
         BUILD_TIME: ${CARTOLITE_BUILD_TIME:-unknown}
         VITE_CARTO_TILE_BASE: ${CARTO_TILE_BASE:-}
         VITE_STATUS_CONSOLE_ORIGIN: ${STATUS_CONSOLE_ORIGIN:-}
+        VITE_HOME_BOUNDS: ${HOME_BOUNDS:-}
       secrets:
         - carto_basemap_api_key
     restart: unless-stopped

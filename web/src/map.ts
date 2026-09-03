@@ -34,6 +34,24 @@ import type { EndpointV2, NodeV2, PacketView, RouteV2, StateV2 } from './types';
 
 export const DEFAULT_CENTER: [number, number] = [0, 20];
 export const DEFAULT_ZOOM = 1.4;
+
+// An operator running one region does not want the worldwide fit: opening on
+// the bounding box of every node heard drifts as distant nodes appear and
+// disappear. VITE_HOME_BOUNDS pins the home view to "west,south,east,north"
+// instead. Bounds rather than a centre and zoom on purpose — fitBounds picks
+// the zoom from the viewport, so the same setting frames the region correctly
+// on a desktop and on a phone. Unset upstream, where the world fit is right.
+export const HOME_BOUNDS = parseHomeBounds(import.meta.env.VITE_HOME_BOUNDS);
+
+export function parseHomeBounds(raw: unknown): [[number, number], [number, number]] | null {
+  if (typeof raw !== 'string') return null;
+  const parts = raw.split(',').map((value) => Number(value.trim()));
+  if (parts.length !== 4 || parts.some((value) => !Number.isFinite(value))) return null;
+  const [west, south, east, north] = parts as [number, number, number, number];
+  if (west < -180 || east > 180 || west >= east) return null;
+  if (south < -85.051129 || north > 85.051129 || south >= north) return null;
+  return [[west, south], [east, north]];
+}
 export const DETAIL_ZOOM = 8.4;
 export const LIVE_FOLLOW_SAFE_RATIO = 0.6;
 export const LIVE_FOLLOW_MIN_INTERVAL_MS = 5_000;
@@ -612,6 +630,16 @@ export class LiveMap {
 
   home(nodes: readonly NodeV2[]): void {
     this.lastFollowMoveAt = 0;
+    // A configured home region wins over fitting whatever is currently heard,
+    // including when nothing has been heard at all — that is the whole point of
+    // pinning it, and it keeps the Reset button landing somewhere predictable.
+    if (HOME_BOUNDS) {
+      this.map.fitBounds(HOME_BOUNDS, {
+        padding: this.container.clientWidth <= 620 ? 24 : 48,
+        duration: this.reducedMotion ? 0 : 620,
+      });
+      return;
+    }
     const now = Date.now();
     const active = nodes.filter((node) => validEndpoint(node) && Math.max(0, now - node.lastSeen) <= ACTIVE_NODE_WINDOW_MS);
     const visible = active.length > 0 ? active : nodes.filter(validEndpoint);
