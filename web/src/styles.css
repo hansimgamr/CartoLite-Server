@@ -92,6 +92,9 @@ button { font: inherit; }
 .brand:hover, .brand:focus-visible { color: #ffffff; outline: none; }
 .brand:focus-visible { border-radius: 6px; box-shadow: 0 0 0 2px #63d9cc; }
 .brand-mark { width: 9px; height: 9px; border: 2px solid #35cdbc; border-radius: 50%; box-shadow: 0 0 11px #36d7c2; }
+.console-link { display: flex; min-height: 44px; align-items: center; gap: 5px; padding: 0 4px; color: #9fd8e4; font-size: 11px; font-weight: 640; text-decoration: none; }
+.console-link:hover, .console-link:focus-visible { color: #eafcff; outline: none; }
+.console-link:focus-visible { border-radius: 6px; box-shadow: 0 0 0 2px #63d9cc; }
 .status { color: #aebdcb; font-size: 11px; font-weight: 600; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #86919b; }
 .status[data-state="active"] .status-dot { background: #45df9a; box-shadow: 0 0 8px #45df9a; }
@@ -418,6 +421,8 @@ button { font: inherit; }
 .node-inspector dl div { display: grid; min-width: 0; gap: 2px; }
 .node-inspector dt { color: #708895; font-size: 9px; font-weight: 650; text-transform: uppercase; }
 .node-inspector dd { overflow: hidden; margin: 0; color: #d9e9ef; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.node-inspector-console-link { display: block; margin: 0 13px 8px; padding: 7px 9px; border: 1px solid rgba(139, 205, 214, 0.22); border-radius: 8px; color: #9fd8e4; font-size: 10px; font-weight: 660; text-align: center; text-decoration: none; }
+.node-inspector-console-link:hover, .node-inspector-console-link:focus-visible { border-color: rgba(99, 217, 204, 0.5); color: #eafcff; background: rgba(41, 184, 169, 0.13); outline: none; }
 .node-inspector h3 { margin: 0; padding: 6px 13px 7px; color: #8da3ae; font-size: 10px; font-weight: 700; }
 .neighbor-list { overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid rgba(139, 205, 214, 0.09); }
 .neighbor-row { display: grid; width: 100%; min-height: 54px; gap: 1px; border: 0; border-bottom: 1px solid rgba(139, 205, 214, 0.08); padding: 7px 13px; color: #eaffff; background: transparent; text-align: left; cursor: pointer; }

@@ -1,20 +1,51 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
-const CARTO_VECTOR_TILEJSON = 'https://tiles.basemaps.cartocdn.com/vector/carto.streets/v1/tiles.json';
-const CARTO_GLYPHS = 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf';
+// This deployment reaches CARTO through a same-origin reverse proxy that
+// appends the project key server-side, so the browser never receives a
+// credential and the page makes no third-party request for geography. The
+// upstream default — a browser-visible key on cartocdn.com URLs — still works
+// unchanged if VITE_CARTO_TILE_BASE is left unset.
+//
+// The tile template is inlined rather than loaded from CARTO's TileJSON on
+// purpose: that document answers with absolute tiles-{a,b,c,d}.basemaps
+// .cartocdn.com URLs, which MapLibre would fetch directly and route straight
+// past the proxy. Inlining keeps every tile request same-origin. minzoom and
+// maxzoom below are the values that TileJSON reports for carto.streets.
+const CARTO_TILE_BASE = import.meta.env.VITE_CARTO_TILE_BASE?.trim().replace(/\/+$/, '') ?? '';
+const CARTO_CDN = 'https://tiles.basemaps.cartocdn.com';
+const CARTO_VECTOR_TILEJSON = `${CARTO_CDN}/vector/carto.streets/v1/tiles.json`;
+const CARTO_GLYPHS_PATH = '/fonts/{fontstack}/{range}.pbf';
+const CARTO_VECTOR_TILES_PATH = '/vectortiles/carto.streets/v1/{z}/{x}/{y}.mvt';
+const CARTO_VECTOR_MINZOOM = 0;
+const CARTO_VECTOR_MAXZOOM = 14;
 const CARTO_BASEMAP_API_KEY = import.meta.env.VITE_CARTO_BASEMAP_API_KEY?.trim() ?? '';
 
-export function cartoVectorStyle(apiKey = CARTO_BASEMAP_API_KEY): StyleSpecification {
+export function cartoVectorStyle(
+  apiKey = CARTO_BASEMAP_API_KEY,
+  tileBase = CARTO_TILE_BASE,
+): StyleSpecification {
+  const base = tileBase.trim().replace(/\/+$/, '');
+  const proxied = base !== '';
   return {
     version: 8,
     name: 'CartoLite Observatory',
-    glyphs: withKey(CARTO_GLYPHS, apiKey),
+    glyphs: proxied
+      ? `${base}${CARTO_GLYPHS_PATH}`
+      : withKey(`${CARTO_CDN}${CARTO_GLYPHS_PATH}`, apiKey),
     sources: {
-      carto: {
-        type: 'vector',
-        url: withKey(CARTO_VECTOR_TILEJSON, apiKey),
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-      }
+      carto: proxied
+        ? {
+          type: 'vector',
+          tiles: [`${base}${CARTO_VECTOR_TILES_PATH}`],
+          minzoom: CARTO_VECTOR_MINZOOM,
+          maxzoom: CARTO_VECTOR_MAXZOOM,
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+        }
+        : {
+          type: 'vector',
+          url: withKey(CARTO_VECTOR_TILEJSON, apiKey),
+          attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+        }
     },
     layers: [
       {

@@ -9,6 +9,8 @@ services:
         APP_VERSION: ${CARTOLITE_VERSION:-dev}
         GIT_SHA: ${CARTOLITE_GIT_SHA:-local}
         BUILD_TIME: ${CARTOLITE_BUILD_TIME:-unknown}
+        VITE_CARTO_TILE_BASE: ${CARTO_TILE_BASE:-}
+        VITE_STATUS_CONSOLE_ORIGIN: ${STATUS_CONSOLE_ORIGIN:-}
       secrets:
         - carto_basemap_api_key
     restart: unless-stopped

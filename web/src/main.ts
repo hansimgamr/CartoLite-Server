@@ -186,7 +186,25 @@ document.addEventListener('keydown', (event) => {
 void requestScreenAwake();
 void start();
 
+// Shown only when this deployment has a companion status console configured.
+function wireStatusConsoleLink(): void {
+  const origin = import.meta.env.VITE_STATUS_CONSOLE_ORIGIN?.trim() ?? '';
+  if (!origin) return;
+  let parsed: URL;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return;
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return;
+  const link = document.getElementById('console-link') as HTMLAnchorElement | null;
+  if (!link) return;
+  link.href = parsed.origin;
+  link.hidden = false;
+}
+
 async function start(): Promise<void> {
+  wireStatusConsoleLink();
   let mapView: LiveMap | undefined;
   let animator: PacketAnimator | undefined;
   let sonifier: RouteSonifier | undefined;
@@ -427,6 +445,15 @@ async function start(): Promise<void> {
       liveMap.home(initial.nodes);
     }
 
+    // Deep link from the companion status console, which computes this id
+    // itself from a node's public key. The id is validated against the shape
+    // the engine emits rather than trusted, and a node that is not in the
+    // current snapshot simply leaves the saved or home view alone.
+    const deepLinked = nodeIDFromHash(location.hash);
+    if (deepLinked && liveMap.selectNodeByID(deepLinked, true)) {
+      mapElement.dataset.viewSource = 'deep-link';
+    }
+
     liveMap.map.on('moveend', () => {
       if (!liveFollow) saveView(localStorage, activeViewClass, liveMap.view());
     });
@@ -625,6 +652,20 @@ function relativeNodeTime(timestamp: number): string {
 function formatUpdate(timestamp: number): string {
   if (!Number.isFinite(timestamp) || timestamp <= 0) return 'Waiting for live state…';
   return new Date(timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
+}
+
+// `#node=n-<24 hex>` — the only shape the engine's opaque node ids take. Anything
+// else is discarded rather than passed on, so the fragment can never carry an
+// arbitrary value into a lookup.
+export function nodeIDFromHash(hash: string): string | null {
+  const value = hash.startsWith('#') ? hash.slice(1) : hash;
+  for (const part of value.split('&')) {
+    const [name, raw] = part.split('=');
+    if (name !== 'node' || !raw) continue;
+    const id = decodeURIComponent(raw).trim().toLowerCase();
+    return /^n-[0-9a-f]{24}$/.test(id) ? id : null;
+  }
+  return null;
 }
 
 function required<T extends HTMLElement>(id: string): T {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildNodeInspectorModel, createNodeInspectorContent, searchNodes } from './nodeInspector';
+import { buildNodeInspectorModel, createNodeInspectorContent, searchNodes, statusConsoleHref } from './nodeInspector';
 import type { NodeV2, RouteV2 } from './types';
 
 const now = 1_700_000_000_000;
@@ -41,6 +41,36 @@ describe('node inspector model', () => {
     expect(content.textContent).toContain('<img src=x>');
     (content.querySelector('.neighbor-row') as HTMLButtonElement).click();
     expect(select).toHaveBeenCalledWith('b');
+  });
+});
+
+describe('status console link', () => {
+  const nodes = new Map([['a', node('a', 'Bullpen 1w')]]);
+  const model = () => buildNodeInspectorModel('a', nodes, [], now, 60_000)!;
+
+  it('is absent unless a console origin is configured', () => {
+    const content = createNodeInspectorContent(document, model(), { now, onSelectNeighbor: vi.fn() });
+    expect(content.querySelector('.node-inspector-console-link')).toBeNull();
+  });
+
+  it('links a node with no neighbours, which is exactly the one worth checking', () => {
+    const content = createNodeInspectorContent(document, model(), {
+      now, onSelectNeighbor: vi.fn(), statusConsoleOrigin: 'https://mesh.example.net',
+    });
+    const link = content.querySelector<HTMLAnchorElement>('.node-inspector-console-link');
+    expect(link?.getAttribute('href')).toBe('https://mesh.example.net/?node=Bullpen%201w');
+  });
+
+  it('encodes an over-the-air label instead of letting it shape the URL', () => {
+    expect(statusConsoleHref('https://mesh.example.net', '</a><img src=x>&node=evil'))
+      .toBe('https://mesh.example.net/?node=%3C%2Fa%3E%3Cimg%20src%3Dx%3E%26node%3Devil');
+  });
+
+  it('refuses an unusable origin or an empty label rather than half-building a link', () => {
+    expect(statusConsoleHref(undefined, 'Bullpen')).toBeNull();
+    expect(statusConsoleHref('not a url', 'Bullpen')).toBeNull();
+    expect(statusConsoleHref('javascript:alert(1)', 'Bullpen')).toBeNull();
+    expect(statusConsoleHref('https://mesh.example.net', '   ')).toBeNull();
   });
 });
 

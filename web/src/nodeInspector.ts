@@ -105,6 +105,12 @@ export function createNodeInspectorContent(
     now?: number;
     onClose?: () => void;
     onSelectNeighbor: (nodeID: string) => void;
+    /**
+     * Origin of the companion status console. When set, the sheet offers a link
+     * to this node's page there. Node ids are one-way hashes, so the link is by
+     * public label, which that console already accepts as `?node=`.
+     */
+    statusConsoleOrigin?: string;
   },
 ): HTMLElement {
   const now = options.now ?? Date.now();
@@ -137,6 +143,19 @@ export function createNodeInspectorContent(
   appendFact(ownerDocument, facts, 'Neighbours', String(model.neighbors.length));
   root.append(facts);
 
+  // Added before the no-neighbours early return below, so a quiet node still
+  // offers the link — that is exactly the node somebody wants the readings for.
+  const consoleHref = statusConsoleHref(options.statusConsoleOrigin, model.node.label);
+  if (consoleHref) {
+    const link = ownerDocument.createElement('a');
+    link.className = 'node-inspector-console-link';
+    link.href = consoleHref;
+    link.rel = 'noopener';
+    link.textContent = 'Open signal readings →';
+    link.title = `See how ${model.node.label} is being heard, on the status console`;
+    root.append(link);
+  }
+
   const heading = ownerDocument.createElement('h3');
   heading.textContent = model.neighbors.length === 0 ? 'No neighbours in this route window' : 'Neighbours · newest first';
   root.append(heading);
@@ -162,6 +181,22 @@ export function createNodeInspectorContent(
   }
   root.append(list);
   return root;
+}
+
+// Node labels arrive over the air and are attacker-controlled, so the label is
+// encoded into the query string and the origin is restricted to a well-formed
+// https URL. Returns null rather than a half-built href when either is unusable.
+export function statusConsoleHref(origin: string | undefined, label: string): string | null {
+  const trimmedLabel = label.trim();
+  if (!origin || !trimmedLabel) return null;
+  let base: URL;
+  try {
+    base = new URL(origin);
+  } catch {
+    return null;
+  }
+  if (base.protocol !== 'https:' && base.protocol !== 'http:') return null;
+  return `${base.origin}/?node=${encodeURIComponent(trimmedLabel)}`;
 }
 
 function appendFact(ownerDocument: Document, list: HTMLDListElement, label: string, value: string): void {

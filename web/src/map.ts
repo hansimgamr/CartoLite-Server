@@ -54,6 +54,9 @@ const NODE_SOURCE_ID = 'nodes';
 const NODE_CLUSTER_SOURCE_ID = 'node-clusters';
 const TERRAIN_SOURCE_ID = 'mapterhorn-dem';
 const TERRAIN_TILEJSON_URL = 'https://tiles.mapterhorn.com/tilejson.json';
+// Optional companion status console. Unset upstream, so the inspector is
+// unchanged unless a deployment configures one.
+const STATUS_CONSOLE_ORIGIN = import.meta.env.VITE_STATUS_CONSOLE_ORIGIN?.trim() ?? '';
 const ROUTE_TRUNK_SOURCE_ID = 'route-trunks';
 const ROUTE_DETAIL_SOURCE_ID = 'route-details';
 const ROUTE_FOCUS_SOURCE_ID = 'route-focus';
@@ -1665,6 +1668,7 @@ export class LiveMap {
       mobile,
       onClose: () => this.clearNodeSelection(),
       onSelectNeighbor: (nodeID) => this.selectNodeByID(nodeID, true),
+      statusConsoleOrigin: STATUS_CONSOLE_ORIGIN,
     });
     if (mobile) {
       this.closePopup(false);

@@ -16,6 +16,32 @@ describe('CARTO vector basemap', () => {
     expect(serialized).not.toContain('dark_all');
   });
 
+  it('routes geography through a same-origin proxy without a browser-visible key', () => {
+    const style = cartoVectorStyle('test key', '/carto-tiles');
+    const serialized = JSON.stringify(style);
+
+    // Inlined tiles, not a TileJSON url: CARTO's TileJSON answers with absolute
+    // cartocdn.com tile URLs, which would bypass the proxy entirely.
+    expect(style.sources.carto).toMatchObject({
+      type: 'vector',
+      tiles: ['/carto-tiles/vectortiles/carto.streets/v1/{z}/{x}/{y}.mvt'],
+      minzoom: 0,
+      maxzoom: 14
+    });
+    expect(style.sources.carto).not.toHaveProperty('url');
+    expect(style.glyphs).toBe('/carto-tiles/fonts/{fontstack}/{range}.pbf');
+    // The whole point: no credential and no third-party host reach the browser.
+    expect(serialized).not.toContain('test key');
+    expect(serialized).not.toContain('test%20key');
+    expect(serialized).not.toContain('cartocdn.com');
+    expect(style.layers.some((layer) => layer.type === 'raster')).toBe(false);
+  });
+
+  it('ignores a trailing slash on the proxy base so paths never double up', () => {
+    const style = cartoVectorStyle('', '/carto-tiles/');
+    expect(style.glyphs).toBe('/carto-tiles/fonts/{fontstack}/{range}.pbf');
+  });
+
   it('adds the browser-visible project key to CARTO PBF requests only once', () => {
     const tile = 'https://tiles-a.basemaps.cartocdn.com/vectortiles/carto.streets/v1/4/3/5.mvt';
     expect(cartoVectorRequestURL(tile, 'test key')).toBe(`${tile}?key=test+key`);
