@@ -60,14 +60,59 @@ TileJSON, because that document answers with absolute
 `tiles-{a,b,c,d}.basemaps.cartocdn.com` URLs that MapLibre would otherwise
 fetch directly, bypassing the proxy.
 
-Glyph paths contain spaces (`Open Sans Regular`), so a proxy that rebuilds the
-upstream URL from a regex capture must emit the percent-encoded form.
+A relative `CARTO_TILE_BASE` is resolved against the document origin before the
+style is built. That is not cosmetic: MapLibre loads tiles inside a Web Worker
+whose own origin is a `blob:` URL, and a root-relative URL reaching it fails
+with `Failed to construct 'Request': Failed to parse URL`. The requests never
+leave the browser, so the network panel shows nothing wrong and the basemap
+simply never paints. An absolute `CARTO_TILE_BASE` is passed through untouched,
+so the proxy may live on another host.
+
+Glyph paths contain spaces (`Open Sans Regular`). A proxy that rebuilds the
+upstream URL from a regex capture must emit the percent-encoded form: nginx
+matches locations against the *decoded* URI, so the capture holds real spaces,
+and a variable in `proxy_pass` is not re-encoded — which would put a raw space
+in the upstream request line.
+
+A worked nginx example, with the key kept in an `include`d file holding
+`set $carto_key "…";`:
+
+```nginx
+location ~ "^/carto-tiles/(?<vpath>vectortiles/[A-Za-z0-9_/.@-]+\.mvt)$" {
+    include /run/secrets/carto_key;
+    proxy_ssl_server_name on;
+    proxy_set_header Host basemaps.cartocdn.com;
+    proxy_pass https://basemaps.cartocdn.com/$vpath?key=$carto_key;
+}
+
+# The fontstack is spelled out rather than captured, so %20 can be written
+# literally upstream. A new font in the style needs its own location.
+location ~ "^/carto-tiles/fonts/Open Sans Regular/(?<range>[0-9]+-[0-9]+)\.pbf$" {
+    include /run/secrets/carto_key;
+    proxy_ssl_server_name on;
+    proxy_set_header Host basemaps.cartocdn.com;
+    proxy_pass https://basemaps.cartocdn.com/fonts/Open%20Sans%20Regular/$range.pbf?key=$carto_key;
+}
+```
+
+Verify in a browser rather than with `curl`: the failure mode above produces no
+HTTP request at all. Check that tiles return `200`, that the page requests no
+host but your own, and that the bundle contains no key.
 
 Topography and 3D still reach Mapterhorn directly, and only after a visitor
-enables them.
+enables them — the one remaining third-party request, and opt-in.
 
 ## Companion status console (optional)
 
 Set `STATUS_CONSOLE_ORIGIN` to link a separate status site from the topbar and
 from each node inspector. Node ids are one-way hashes, so the inspector links by
-public label as `?node=<label>`.
+public label as `?node=<label>` — the receiving site should match that label
+tolerantly, since it is the node's over-the-air name and may carry an emoji
+prefix its own directory does not.
+
+The map also accepts `#node=<id>` to open on a given node, which lets a console
+holding public keys link back: a node's public id is `n-` followed by the first
+24 hex characters of `sha256` over the **uppercase** key. The fragment is
+validated against that shape and otherwise ignored. It is applied once the map
+reports `idle`, because the style and layers must exist before a node can be
+selected.

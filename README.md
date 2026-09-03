@@ -22,6 +22,25 @@
   <a href="https://github.com/n30nex/CartoLite-Server/releases/latest">Latest release</a>
 </p>
 
+> [!NOTE]
+> **This is a deployment fork.** Upstream is
+> [`n30nex/CartoLite-Server`](https://github.com/n30nex/CartoLite-Server); this
+> copy runs the Quinte West / Belleville (**YTR**) mesh at
+> `map.hansimgamr.net`, alongside the status console at
+> `mesh.hansimgamr.net` ([`hansimgamr/am-i-connected`](https://github.com/hansimgamr/am-i-connected)).
+>
+> Branch `quinte-deployment` adds two optional settings, both off by default so
+> upstream behaviour is unchanged when neither is set:
+>
+> - `CARTO_TILE_BASE` — serve CARTO geography through a reverse proxy on your
+>   own origin that appends the key server-side, so no credential is compiled
+>   into the frontend and the page makes no third-party request for tiles.
+> - `STATUS_CONSOLE_ORIGIN` — link a companion status site from the topbar and
+>   each node inspector, plus a `#node=<id>` deep link into the map.
+>
+> See [Deployment](docs/deployment.md) for both. Everything else, including the
+> privacy boundary and the public API, is upstream's.
+
 ![CartoLite Server showing active MeshCore nodes and routes across the Great Lakes](docs/assets/cartolite-overview.webp)
 
 <p align="center"><sub>Live topology across the Great Lakes, with routes coloured by packet type.</sub></p>

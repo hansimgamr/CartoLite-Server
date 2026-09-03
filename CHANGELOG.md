@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased — `quinte-deployment` fork
+
+Deployment fork for the Quinte West / Belleville (YTR) mesh. Both additions are
+optional and default to upstream behaviour.
+
+- Add `CARTO_TILE_BASE`, pointing the client at a same-origin reverse proxy that
+  appends the CARTO key server-side, so no browser-visible credential is
+  compiled in and the page makes no third-party request for geography. The
+  vector tile template is inlined into the style rather than loaded from CARTO's
+  TileJSON, which answers with absolute CDN URLs that would bypass the proxy.
+- Resolve a relative tile base against the document origin before MapLibre sees
+  it. MapLibre loads tiles in a Web Worker whose origin is a `blob:` URL, where
+  a root-relative URL fails to parse and the basemap silently never paints.
+- Add `STATUS_CONSOLE_ORIGIN`, linking a companion status console from the
+  topbar and from each node inspector. The inspector links by public label,
+  since node ids are one-way hashes; the label is encoded, not interpolated.
+- Accept a `#node=<id>` fragment to open on a given node, validated against the
+  id shape the engine emits and applied once the map reports `idle`.
+- Title the browser tab `CartoQuinte`.
+
 ## 0.1.0 - 2026-09-02
 
 - Create the standalone CartoLite Server distribution from CartoLite 0.9.1.
