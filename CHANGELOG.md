@@ -64,3 +64,9 @@ optional and default to upstream behaviour.
 - Retain sanitized packet observations and available RSSI/SNR across visits, reconnects and graceful restarts, capped at seven days / 10,000 events.
 - Add always-visible Latest packet card independent of paused/filtered log, paged saved log and CSV radio fields.
 - Replace mobile overlay offsets with a shared layout so node details, traces and the packet card remain accessible.
+
+## 2026-09-05 - Preserve known parts of packet paths
+
+- Keep safe links on both sides of unknown hops; show explicit gaps, isolated known nodes and names without map coordinates.
+- Retain public partial-path metadata across visits/restarts and show it in the log, latest packet, CSV and selected map markers.
+- Split animation/replay at gaps. Earlier records display their known receiver without inventing missing path history.

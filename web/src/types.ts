@@ -52,12 +52,17 @@ export interface StateV2 {
 }
 
 export interface RouteSegmentEventV2 {
+  breakBefore?: boolean;
   routeId: string;
   fromId: string;
   toId: string;
 }
 
+export interface PathStepV2 { label: string; node?: EndpointV2; }
+
 interface PacketBaseV2 {
+  path?: PathStepV2[];
+  partial?: boolean;
   seq: number;
   id: string;
   at: number;
@@ -79,6 +84,7 @@ export interface ObserverPacketEventV2 extends PacketBaseV2 {
 export type PacketEventV2 = RoutePacketEventV2 | ObserverPacketEventV2;
 
 export interface RouteSegmentView {
+  breakBefore?: boolean;
   routeId: string;
   from: EndpointV2;
   to: EndpointV2;

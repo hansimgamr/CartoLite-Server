@@ -295,7 +295,20 @@ async function start(): Promise<void> {
     animator = liveAnimator;
     const routeSonifier = new RouteSonifier(liveMap.map, packetCanvas);
     sonifier = routeSonifier;
+    let knownPathMarkers: Marker[] = [];
     const traceInspector = new TraceInspector(traceRoot, (packet) => {
+      for (const marker of knownPathMarkers) marker.remove();
+      knownPathMarkers = [];
+      liveMap.showPacketPath(packet);
+      for (const [index, step] of (packet.path || []).entries()) {
+        if (!step.node) continue;
+        const element = document.createElement('button'); element.type = 'button'; element.className = 'known-path-marker'; element.textContent = String(index + 1);
+        element.title = `Path position ${index + 1}: ${step.label}`; element.setAttribute('aria-label', element.title);
+        const node = step.node;
+        element.addEventListener('click', () => liveMap.selectNodeByID(node.id, false));
+        knownPathMarkers.push(new Marker({element}).setLngLat([node.lng, node.lat]).addTo(liveMap.map));
+      }
+      if (packet.partial) liveMap.fitPacket(packet);
       if (packet.mode === 'route') {
         const routeID = packet.segments[0]?.routeId;
         if (routeID) liveMap.inspectRoute(routeID);

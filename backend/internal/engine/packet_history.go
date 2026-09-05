@@ -11,9 +11,10 @@ const PacketHistoryLimit = 10_000
 const PacketHistoryDays = 7
 
 type HistorySegmentV2 struct {
-	RouteID string     `json:"routeId"`
-	From    EndpointV2 `json:"from"`
-	To      EndpointV2 `json:"to"`
+	BreakBefore bool       `json:"breakBefore,omitempty"`
+	RouteID     string     `json:"routeId"`
+	From        EndpointV2 `json:"from"`
+	To          EndpointV2 `json:"to"`
 }
 
 // Endpoint snapshots keep old observations readable after topology changes.
@@ -77,6 +78,21 @@ func validHistoryPacket(p PacketViewV2) bool {
 	}
 	if p.SNR != nil && safeRadio(p.SNR, -100, 100) == nil {
 		return false
+	}
+	if len(p.Path) > 520 {
+		return false
+	}
+	for _, step := range p.Path {
+		if step.Node != nil {
+			if !endpointOK(*step.Node) || step.Label != step.Node.Label {
+				return false
+			}
+		} else {
+			label := strings.TrimSuffix(step.Label, " (location unavailable)")
+			if label == "" || sanitizeLabel(label, "unknown", false) != label {
+				return false
+			}
+		}
 	}
 	if p.Mode == "observer" {
 		return p.Observer != nil && endpointOK(*p.Observer) && len(p.Segments) == 0

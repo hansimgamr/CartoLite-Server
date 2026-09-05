@@ -276,12 +276,13 @@ func (e *Engine) process(message mqtt.Message) bool {
 		source = e.sourceNode(message.Topic.Region, packet)
 	}
 	payloadKind := meshcore.PayloadName(packet.PayloadType)
-	segments, routed := e.resolveAndRecord(message, packet, source, observer, payloadKind)
+	segments, path := e.resolveAndRecord(message, packet, source, observer, payloadKind)
+	routed := len(segments) > 0
 	if routed {
-		e.emitPacket(message.HeardAt, payloadKind, segments, nil, message.RSSI, message.SNR)
+		e.emitPacket(message.HeardAt, payloadKind, segments, nil, path, message.RSSI, message.SNR)
 	} else if observer != nil && observer.HasCoords {
 		endpoint := endpointFor(observer)
-		e.emitPacket(message.HeardAt, payloadKind, nil, &endpoint, message.RSSI, message.SNR)
+		e.emitPacket(message.HeardAt, payloadKind, nil, &endpoint, path, message.RSSI, message.SNR)
 	}
 	return changed || observerChanged || routed || (observer != nil && observer.HasCoords)
 }
@@ -325,7 +326,7 @@ func (e *Engine) observePublisher(message mqtt.Message) (*privateNode, bool) {
 func (e *Engine) sourceNode(region string, packet meshcore.Packet) *privateNode {
 	if publicKey := meshcore.SourcePublicKey(packet); publicKey != "" {
 		node := e.nodes[nodeMapKey(region, publicKey)]
-		if node != nil && node.HasCoords {
+		if node != nil {
 			return node
 		}
 		return nil
@@ -337,7 +338,7 @@ func (e *Engine) sourceNode(region string, packet meshcore.Packet) *privateNode 
 	matches := e.prefixes[prefixMapKey(region, 1, prefix)]
 	positioned := make([]*privateNode, 0, len(matches))
 	for nodeKey := range matches {
-		if candidate := e.nodes[nodeKey]; candidate != nil && candidate.HasCoords {
+		if candidate := e.nodes[nodeKey]; candidate != nil {
 			positioned = append(positioned, candidate)
 		}
 	}
@@ -347,48 +348,66 @@ func (e *Engine) sourceNode(region string, packet meshcore.Packet) *privateNode 
 	return positioned[0]
 }
 
-func (e *Engine) resolveAndRecord(message mqtt.Message, packet meshcore.Packet, source, observer *privateNode, payloadKind string) ([]RouteSegmentV2, bool) {
-	if packet.InvalidForMap || (message.RSSI == nil && message.SNR == nil) {
-		return nil, false
-	}
-	seen := make(map[string]struct{}, len(packet.Path))
-	ordered := make([]*privateNode, 0, len(packet.Path)+2)
-	if source != nil && source.HasCoords {
-		ordered = append(ordered, source)
-	}
-	for _, prefix := range packet.Path {
-		if _, duplicate := seen[prefix]; duplicate {
-			return nil, false
+func (e *Engine) resolveAndRecord(message mqtt.Message, packet meshcore.Packet, source, observer *privateNode, payloadKind string) ([]RouteSegmentV2, []PathStepV2) {
+	path := []PathStepV2{}
+	appendNode := func(node *privateNode, unknown string) {
+		if node == nil {
+			path = append(path, PathStepV2{Label: unknown})
+			return
 		}
-		seen[prefix] = struct{}{}
-		matches := e.prefixes[prefixMapKey(message.Topic.Region, packet.HashSize, prefix)]
-		forwarders := make([]*privateNode, 0, len(matches))
-		for nodeKey := range matches {
-			candidate := e.nodes[nodeKey]
-			if candidate != nil && (candidate.Role == "repeater" || candidate.Role == "room_server") {
-				forwarders = append(forwarders, candidate)
+		if !node.HasCoords {
+			path = append(path, PathStepV2{Label: node.Label + " (location unavailable)"})
+			return
+		}
+		endpoint := endpointFor(node)
+		if len(path) > 0 && path[len(path)-1].Node != nil && path[len(path)-1].Node.ID == endpoint.ID {
+			return
+		}
+		path = append(path, PathStepV2{Label: endpoint.Label, Node: &endpoint})
+	}
+	appendNode(source, "Unknown sender")
+	if packet.InvalidForMap {
+		path = append(path, PathStepV2{Label: "Unknown path"})
+	} else {
+		seen := make(map[string]bool)
+		for _, prefix := range packet.Path {
+			if seen[prefix] {
+				path = append(path, PathStepV2{Label: "Unknown hop"})
+				continue
+			}
+			seen[prefix] = true
+			var match *privateNode
+			count := 0
+			for nodeKey := range e.prefixes[prefixMapKey(message.Topic.Region, packet.HashSize, prefix)] {
+				candidate := e.nodes[nodeKey]
+				if candidate != nil && (candidate.Role == "repeater" || candidate.Role == "room_server") {
+					match = candidate
+					count++
+				}
+			}
+			if count != 1 {
+				match = nil
+			}
+			appendNode(match, "Unknown hop")
+		}
+	}
+	appendNode(observer, "Unknown receiver")
+	// Never join across unknown nodes, unsupported paths, missing RF, or a distance gate.
+	segments := []RouteSegmentV2{}
+	visiblePath := []PathStepV2{}
+	lastEnd := -1
+	for i, step := range path {
+		if i > 0 && path[i-1].Node != nil && step.Node != nil {
+			from, to := path[i-1].Node, step.Node
+			if packet.InvalidForMap || (message.RSSI == nil && message.SNR == nil) ||
+				(distanceKM(from.Lat, from.Lng, to.Lat, to.Lng) > maxEdgeKM && packet.PayloadType != meshcore.PayloadTrace) {
+				visiblePath = append(visiblePath, PathStepV2{Label: "Unmapped link"})
+			} else {
+				segments = append(segments, RouteSegmentV2{BreakBefore: len(segments) > 0 && i != lastEnd+1, RouteID: routePublicID(from.ID, to.ID), FromID: from.ID, ToID: to.ID})
+				lastEnd = i
 			}
 		}
-		if len(forwarders) != 1 || !forwarders[0].HasCoords {
-			return nil, false
-		}
-		ordered = appendUniqueNode(ordered, forwarders[0])
-	}
-	if observer != nil && observer.HasCoords {
-		ordered = appendUniqueNode(ordered, observer)
-	}
-	if len(ordered) < 2 {
-		return nil, false
-	}
-	segments := make([]RouteSegmentV2, 0, len(ordered)-1)
-	for index := 0; index+1 < len(ordered); index++ {
-		from, to := ordered[index], ordered[index+1]
-		if distanceKM(from.Lat, from.Lng, to.Lat, to.Lng) > maxEdgeKM && packet.PayloadType != meshcore.PayloadTrace {
-			return nil, false
-		}
-		fromID, toID := nodePublicID(from), nodePublicID(to)
-		routeID := routePublicID(fromID, toID)
-		segments = append(segments, RouteSegmentV2{RouteID: routeID, FromID: fromID, ToID: toID})
+		visiblePath = append(visiblePath, step)
 	}
 	for _, segment := range segments {
 		route := e.routes[segment.RouteID]
@@ -408,7 +427,7 @@ func (e *Engine) resolveAndRecord(message mqtt.Message, packet meshcore.Packet, 
 		}
 	}
 	e.evictRoutes()
-	return segments, len(segments) > 0
+	return segments, visiblePath
 }
 
 func (e *Engine) upsertNode(region, key, name, role string, observer bool, lat, lng float64, hasCoords bool, seenAt int64) (*privateNode, bool) {
@@ -471,13 +490,19 @@ func shouldPublishFreshness(node *privateNode, at int64) bool {
 	return at > node.LastPublished && (node.LastPublished == 0 || at-node.LastPublished >= nodeFreshnessEventEvery.Milliseconds())
 }
 
-func (e *Engine) emitPacket(at int64, payloadType string, segments []RouteSegmentV2, observer *EndpointV2, radio ...*float64) {
+func (e *Engine) emitPacket(at int64, payloadType string, segments []RouteSegmentV2, observer *EndpointV2, path []PathStepV2, radio ...*float64) {
 	seq := e.seq.Add(1)
 	mode := "route"
 	if observer != nil {
 		mode = "observer"
 	}
-	event := PacketEventV2{Seq: seq, ID: opaqueID("p", e.bootID+"|"+strconv.FormatUint(seq, 10)), At: at, PayloadType: payloadType, Mode: mode, Segments: segments, Observer: observer}
+	partial := false
+	for _, step := range path {
+		if step.Node == nil {
+			partial = true
+		}
+	}
+	event := PacketEventV2{Path: path, Partial: partial, Seq: seq, ID: opaqueID("p", e.bootID+"|"+strconv.FormatUint(seq, 10)), At: at, PayloadType: payloadType, Mode: mode, Segments: segments, Observer: observer}
 	if len(radio) == 2 {
 		event.RSSI = safeRadio(radio[0], -200, 0)
 		event.SNR = safeRadio(radio[1], -100, 100)
@@ -489,7 +514,7 @@ func (e *Engine) emitPacket(at int64, payloadType string, segments []RouteSegmen
 		if from == nil || to == nil {
 			return
 		}
-		view.Segments = append(view.Segments, HistorySegmentV2{RouteID: segment.RouteID, From: endpointFor(from), To: endpointFor(to)})
+		view.Segments = append(view.Segments, HistorySegmentV2{BreakBefore: segment.BreakBefore, RouteID: segment.RouteID, From: endpointFor(from), To: endpointFor(to)})
 	}
 	e.packets.add(view)
 	e.emit(Event{Name: "packet", Seq: seq, Data: event})

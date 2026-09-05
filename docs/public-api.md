@@ -81,3 +81,11 @@ Schema v2 intentionally replaces the embedded `route.from` and `route.to` object
 ## Saved observation history (September 2026)
 
 The operator-approved saved packet/radio history extends the earlier live-only design. See [Live Traces](live-traces.md) for the bounded seven-day / 10,000-observation archive, public `/api/packet-history` schema, optional RSSI/SNR and checkpoint durability. Only sanitized public observation metadata is retained; no message payloads or keys are added.
+
+## Partial packet paths
+
+New observations include optional `path` (ordered steps containing a sanitized `label` and optional public `node` endpoint) and `partial` in both SSE and saved PacketView records. Unknown sender/hop/receiver positions and unverified links are explicit gaps. Known nodes without coordinates retain their public name with “location unavailable”. A single unresolved hop no longer discards safe adjacent links elsewhere in the path. Raw path hashes and internal resolver details are not exposed.
+
+The log, latest-packet card and CSV show the known path with ellipses for gaps. Selecting an event numbers its known map positions; Show known path fits them. Only adjacent, uniquely resolved, positioned endpoints passing the existing RF/distance checks produce mapped links. Animation/replay splits disconnected fragments even in the All traffic view and never crosses a gap. Older saved observer events still show the receiving node; missing historical path details cannot be reconstructed.
+
+Mapped segments may include `breakBefore: true` to start a separate fragment after an unresolved interval, even if two fragments meet at the same known node. Consumers must not animate continuously across that boundary.

@@ -774,9 +774,24 @@ export class LiveMap {
     return true;
   }
 
+  showPacketPath(packet: PacketView): void {
+    if (!this.layersReady) return;
+    const id = 'inspected-packet-path';
+    const data: FeatureCollection<LineString> = {type:'FeatureCollection', features: packet.mode === 'route' ? packet.segments.map(segment => ({
+      type:'Feature', properties:{}, geometry:{type:'LineString',coordinates:[[segment.from.lng,segment.from.lat],[segment.to.lng,segment.to.lat]]}
+    })) : []};
+    const source = this.map.getSource(id) as GeoJSONSource | undefined;
+    if (source) source.setData(data);
+    else {
+      this.map.addSource(id,{type:'geojson',data});
+      this.map.addLayer({id,type:'line',source:id,paint:{'line-color':'#b9fff0','line-width':3,'line-opacity':0.9}});
+    }
+  }
+
   fitPacket(packet: PacketView): boolean {
     const endpoints = packetEndpoints(packet).filter(validEndpoint);
-    if (endpoints.length < 2) return false;
+    if (endpoints.length === 0) return false;
+    if (endpoints.length === 1) { this.map.easeTo({center:[endpoints[0]!.lng,endpoints[0]!.lat],zoom:Math.max(this.map.getZoom(),10)}); return true; }
     const bounds = new maplibregl.LngLatBounds();
     for (const endpoint of endpoints) bounds.extend([endpoint.lng, endpoint.lat]);
     this.map.fitBounds(bounds, {
@@ -2123,6 +2138,7 @@ export function isRouteInspectable(
 }
 
 export function packetEndpoints(packet: PacketView): EndpointV2[] {
+  if (packet.path?.some(step => step.node)) return [...new Map(packet.path.flatMap(step => step.node ? [[step.node.id, step.node] as const] : [])).values()];
   if (packet.mode === 'observer') return [packet.observer];
   const endpoints: EndpointV2[] = [];
   const seen = new Set<string>();

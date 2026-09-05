@@ -1,3 +1,4 @@
+import { packetPathLabel } from './packetPath';
 import type { PacketKind } from './trafficVisuals';
 import type { PacketView } from './types';
 import { normalizePacketKind, PACKET_KIND_LABELS, PACKET_KINDS, PACKET_KIND_COLORS } from './trafficVisuals';
@@ -99,8 +100,8 @@ export class TraceInspector {
       this.ticker.style.setProperty('--packet-color', PACKET_KIND_COLORS[kind]);
       const age = Math.max(0, Math.floor((Date.now() - packet.at) / 1000));
       const ago = age < 60 ? `${age}s ago` : age < 3600 ? `${Math.floor(age / 60)}m ago` : `${Math.floor(age / 3600)}h ago`;
-      const path = packet.mode === 'route' ? `${packet.segments[0]?.from.label} → ${packet.segments.at(-1)?.to.label}` : `${packet.observer.label} · heard here`;
-      event.textContent = `${PACKET_KIND_LABELS[kind]} · ${path}`;
+      const path = packetPathLabel(packet);
+      event.textContent = `${PACKET_KIND_LABELS[kind]} · ${packet.partial ? "Partial path · " : ""}${path}`;
       signal.textContent = `Observed ${ago} · ${radioLabel(packet)}`;
       signal.title = new Date(packet.at).toLocaleString();
     } else { event.textContent = 'Waiting for an observation'; signal.textContent = 'The log continues collecting while you are away.'; }
@@ -119,7 +120,7 @@ export class TraceInspector {
     const rows = this.store.all().filter(row => !filter || normalizePacketKind(row.packet.payloadType) === filter);
     const csv = ['time,kind,mode,segments,route,rssi_dbm,snr_db', ...rows.map(row => {
       const packet = row.packet;
-      const route = packet.mode === 'route' ? packet.segments.map(segment => `${segment.from.label} -> ${segment.to.label}`).join(' | ') : 'Heard here; route unavailable';
+      const route = packetPathLabel(packet);
       return [new Date(packet.at).toISOString(), PACKET_KIND_LABELS[normalizePacketKind(packet.payloadType)], packet.mode, packet.mode === 'route' ? packet.segments.length : 0, route, packet.rssi ?? '', packet.snr ?? '']
         .map(value => `"${String(value).replaceAll('"', '""')}"`).join(',');
     })].join('\n');
@@ -143,11 +144,11 @@ export class TraceInspector {
       button.style.setProperty('--packet-color', PACKET_KIND_COLORS[kind]);
       const companion = kind === 'Other' ? companionName(row.packet) : '';
       const kindLabel = companion ? `${PACKET_KIND_LABELS[kind]} · Companion: ${companion}` : PACKET_KIND_LABELS[kind];
-      const path = row.packet.mode === 'route' ? row.packet.segments.map(segment => `${segment.from.label} → ${segment.to.label}`).join(' · ') : 'Heard here; route unavailable';
+      const path = packetPathLabel(row.packet);
       if (this.logMode) {
         button.classList.add('trace-log-row');
         const stamp = document.createElement('time'); stamp.dateTime = new Date(row.packet.at).toISOString(); stamp.textContent = new Date(row.packet.at).toLocaleString();
-        const meta = document.createElement('span'); meta.className = 'trace-log-meta'; meta.textContent = `${kindLabel} · ${row.packet.mode === 'route' ? `${row.packet.segments.length} hops` : 'observer'}`;
+        const meta = document.createElement('span'); meta.className = 'trace-log-meta'; meta.textContent = `${kindLabel} · ${row.packet.partial ? 'Partial path · ' : ''}${row.packet.mode === 'route' ? `${row.packet.segments.length} mapped links` : 'known receiver'}`;
         const route = document.createElement('span'); route.className = 'trace-log-path'; route.textContent = `${path} · ${radioLabel(row.packet)}`;
         button.append(stamp, meta, route);
       } else button.textContent = `${new Date(row.packet.at).toLocaleTimeString()} · ${kindLabel} · ${path} · ${radioLabel(row.packet)}`;
@@ -158,11 +159,15 @@ export class TraceInspector {
   }
 
   private async loadRouteHistory(packet: PacketView): Promise<void> {
-    if (packet.mode !== 'route' || packet.segments.length === 0) { this.detail.textContent = packet.mode === 'observer' ? 'Heard here; route unavailable.' : ''; return; }
+    if (packet.mode !== 'route' || packet.segments.length === 0) {
+      const fit = document.createElement('button'); fit.type = 'button'; fit.textContent = 'Show known nodes'; fit.addEventListener('click', () => this.onFit(packet));
+      const note = document.createElement('span'); note.textContent = packet.path?.length ? 'Partial path: gaps are unresolved; no link is drawn across them.' : 'Only the receiving node was retained for this earlier observation.';
+      this.detail.replaceChildren(fit, note); return;
+    }
     const ids = [...new Set(packet.segments.map(segment => segment.routeId))].slice(0, 25);
     this.detail.replaceChildren();
     const actions = document.createElement('span');
-    const fit = document.createElement('button'); fit.type = 'button'; fit.textContent = 'Fit route'; fit.addEventListener('click', () => this.onFit(packet));
+    const fit = document.createElement('button'); fit.type = 'button'; fit.textContent = packet.partial ? 'Show known path' : 'Fit route'; fit.addEventListener('click', () => this.onFit(packet));
     const replay = document.createElement('button'); replay.type = 'button'; replay.textContent = 'Replay (illustrative)'; replay.title = 'Visual replay only; not measured radio timing'; replay.addEventListener('click', () => this.onReplay(packet));
     actions.append(fit, replay); this.detail.append(actions, document.createTextNode(' Loading retained route activity…'));
     try {

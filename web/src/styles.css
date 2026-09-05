@@ -687,3 +687,6 @@ button { font: inherit; }
 @media (orientation: landscape) and (max-height: 520px) {
   :root[data-view-class="mobile"] .map-observation-panels .node-inspector { display: block; }
 }
+
+.known-path-marker { width: 28px; height: 28px; border: 2px solid #b9fff0; border-radius: 50%; color: #eafffa; background: #103c38; font: 700 12px/1 system-ui; box-shadow: 0 0 0 3px #071c22aa; cursor: pointer; }
+.known-path-marker:focus-visible { outline: 3px solid #ffd15a; outline-offset: 3px; }

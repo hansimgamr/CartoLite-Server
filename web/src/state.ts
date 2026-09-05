@@ -123,7 +123,7 @@ export class LiveStore {
       });
       const from = this.nodeByID(segment.fromId);
       const to = this.nodeByID(segment.toId);
-      if (from && to) resolved.push({ routeId: segment.routeId, from: endpoint(from), to: endpoint(to) });
+      if (from && to) resolved.push({ ...(segment.breakBefore ? {breakBefore: true} : {}), routeId: segment.routeId, from: endpoint(from), to: endpoint(to) });
     }
     if (resolved.length !== packet.segments.length) return null;
     return { ...packet, segments: resolved };

@@ -51,21 +51,19 @@ export type AreaPacket = Pick<PacketView, 'id' | 'seq' | 'at' | 'payloadType'> &
 export function projectPacketToArea(packet: PacketView | null, area: AreaBounds | null): AreaPacket | null {
   if (!packet) return null;
   let runs: PacketView[];
-  if (!area) {
-    runs = [packet];
-  } else if (packet.mode === 'observer') {
-    runs = pointInArea(packet.observer, area) ? [packet] : [];
+  if (packet.mode === 'observer') {
+    runs = !area || pointInArea(packet.observer, area) ? [{...packet, ...(packet.path ? {path: undefined} : {})}] : [];
   } else {
     runs = [];
     let current: RoutePacketView | undefined;
     for (const segment of packet.segments) {
-      if (!pointInArea(segment.from, area) || !pointInArea(segment.to, area)) {
+      if (area && (!pointInArea(segment.from, area) || !pointInArea(segment.to, area))) {
         current = undefined;
         continue;
       }
       const previous = current?.segments.at(-1);
-      if (!previous || !connected(previous, segment)) {
-        current = { ...packet, segments: [] };
+      if (!previous || segment.breakBefore || !connected(previous, segment)) {
+        current = { ...packet, ...(packet.path ? {path: undefined} : {}), segments: [] };
         runs.push(current);
       }
       current!.segments.push(segment);

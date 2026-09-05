@@ -13,7 +13,9 @@ export function isTracePacket(value: unknown): value is PacketView {
   if (typeof p.id !== 'string' || !p.id || !Number.isFinite(p.at) || !Number.isSafeInteger(p.seq) || !PACKET_KINDS.includes(p.payloadType)) return false;
   if (p.rssi !== undefined && (!Number.isFinite(p.rssi) || p.rssi < -200 || p.rssi > 0)) return false;
   if (p.snr !== undefined && (!Number.isFinite(p.snr) || Math.abs(p.snr) > 100)) return false;
-  return p.mode === 'observer' ? endpoint(p.observer) : p.mode === 'route' && Array.isArray(p.segments)
+  if (p.partial !== undefined && typeof p.partial !== 'boolean') return false;
+  if (p.path !== undefined && (!Array.isArray(p.path) || p.path.length > 520 || !p.path.every(step => step && typeof step.label === 'string' && step.label.length <= 100 && (step.node === undefined || endpoint(step.node))))) return false;
+  return p.mode === 'observer'  ? endpoint(p.observer) : p.mode === 'route' && Array.isArray(p.segments)
     && p.segments.length > 0 && p.segments.length <= 256 && p.segments.every(s => s && typeof s.routeId === 'string' && endpoint(s.from) && endpoint(s.to));
 }
 

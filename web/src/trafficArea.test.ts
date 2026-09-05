@@ -90,7 +90,7 @@ describe('packet projection', () => {
     expect(projectPacketToArea(packet([segment(a, west)]), area)).toBeNull();
     expect(projectPacketToArea(packet([]), area)).toBeNull();
     expect(projectPacketToArea(null, area)).toBeNull();
-    expect(projectPacketToArea(original, null)?.runs[0]).toBe(original);
+    expect(projectPacketToArea(original, null)?.runs[0]).toEqual(original);
   });
 
   it('splits omitted hops and discontinuities while keeping one observation identity', () => {

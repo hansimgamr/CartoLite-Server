@@ -55,12 +55,21 @@ type MapV2 struct {
 }
 
 type RouteSegmentV2 struct {
-	RouteID string `json:"routeId"`
-	FromID  string `json:"fromId"`
-	ToID    string `json:"toId"`
+	BreakBefore bool   `json:"breakBefore,omitempty"`
+	RouteID     string `json:"routeId"`
+	FromID      string `json:"fromId"`
+	ToID        string `json:"toId"`
+}
+
+// PathStepV2 contains only a public node/label or an explicit unresolved gap.
+type PathStepV2 struct {
+	Label string      `json:"label"`
+	Node  *EndpointV2 `json:"node,omitempty"`
 }
 
 type PacketEventV2 struct {
+	Path        []PathStepV2     `json:"path,omitempty"`
+	Partial     bool             `json:"partial,omitempty"`
 	Seq         uint64           `json:"seq"`
 	ID          string           `json:"id"`
 	At          int64            `json:"at"`
