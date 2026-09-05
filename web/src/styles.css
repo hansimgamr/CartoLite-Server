@@ -667,9 +667,9 @@ button { font: inherit; }
 .trace-log-meta { color: var(--packet-color, #4de7c4); white-space: normal; }
 :root[data-view-class="mobile"] .map-observation-panels { position: absolute; inset: 110px 8px max(8px, env(safe-area-inset-bottom)); z-index: 12; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; pointer-events: none; }
 :root[data-view-class="mobile"] .map-observation-panels > * { position: static; width: 100%; flex: 0 1 auto; min-height: 0; pointer-events: auto; }
-:root[data-view-class="mobile"] .map-observation-panels .node-inspector-sheet { max-height: 30%; overflow-y: auto; }
+:root[data-view-class="mobile"] .map-observation-panels .node-inspector-sheet { max-height: 25%; overflow-y: auto; }
 :root[data-view-class="mobile"] .map-observation-panels .node-inspector { max-height: none; }
-:root[data-view-class="mobile"] .map-observation-panels .trace-inspector { max-height: 48%; border-radius: 12px; padding: 12px; overscroll-behavior: contain; }
+:root[data-view-class="mobile"] .map-observation-panels .trace-inspector { max-height: 40%; border-radius: 12px; padding: 12px; overscroll-behavior: contain; }
 :root[data-view-class="mobile"] .map-observation-panels .packet-ticker { flex-shrink: 0; padding: 8px 11px; }
 :root[data-view-class="mobile"] .trace-row { font-size: 11px; }
 @media (orientation: landscape) and (max-height: 520px) {
@@ -677,4 +677,13 @@ button { font: inherit; }
   :root[data-view-class="mobile"] .map-observation-panels .node-inspector-sheet { grid-column: 1; grid-row: 1; max-height: 100%; }
   :root[data-view-class="mobile"] .map-observation-panels .trace-inspector { grid-column: 2; grid-row: 1; max-height: 100%; }
   :root[data-view-class="mobile"] .map-observation-panels .packet-ticker { grid-column: 1 / -1; grid-row: 2; }
+}
+
+@media (max-width: 620px) {
+  :root[data-view-class="mobile"] .topbar { right: 8px; }
+  :root[data-view-class="mobile"] .controls { top: max(60px, calc(env(safe-area-inset-top) + 52px)); }
+  #area-summary-bar { right: 196px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  :root[data-view-class="mobile"] .map-observation-panels .node-inspector { display: block; }
 }

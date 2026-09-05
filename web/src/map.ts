@@ -10,6 +10,7 @@ import type {
   LineString,
   Point
 } from 'geojson';
+import { viewClass } from './preferences';
 import { cartoVectorRequestURL, cartoVectorStyle } from './basemap';
 import {
   buildNodeInspectorModel,
@@ -1847,7 +1848,7 @@ export class LiveMap {
   }
 
   private isMobileInspector(): boolean {
-    return this.container.clientWidth <= 620 || window.matchMedia('(pointer: coarse)').matches;
+    return viewClass(this.container.clientWidth, this.container.clientHeight) === 'mobile';
   }
 
   private inspectorPopupAnchor(node: NodeV2): 'left' | 'right' {
