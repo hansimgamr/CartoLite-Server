@@ -125,4 +125,5 @@ type privateRoute struct {
 	LastHeard   int64   `json:"lastHeard"`
 	LastKind    string  `json:"lastKind,omitempty"`
 	Traffic     float64 `json:"traffic,omitempty"`
+	History     []int64 `json:"history,omitempty"`
 }

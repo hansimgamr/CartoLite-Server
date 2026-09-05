@@ -70,6 +70,7 @@ func loadCheckpoint(path string) (map[string]*privateNode, map[string]*privateRo
 		if route.LastKind == "" {
 			route.LastKind = "Other"
 		}
+		if len(route.History) > 200 { route.History = route.History[len(route.History)-200:] }
 		if route.Traffic == 0 {
 			route.Traffic = 1
 		}

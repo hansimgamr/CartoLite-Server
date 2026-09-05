@@ -13,6 +13,7 @@ export class TraceInspector {
   private readonly status = document.createElement('p');
   private readonly pause = document.createElement('button');
   private readonly exportButton = document.createElement('button');
+  private readonly detail = document.createElement('p');
 
   constructor(root: HTMLElement, private readonly onSelect: (packet: PacketView) => void) {
     root.hidden = new URLSearchParams(location.search).get('panel') !== 'traces';
@@ -26,7 +27,7 @@ export class TraceInspector {
     this.kind.addEventListener('change', () => this.render());
     const controls = document.createElement('div'); controls.className = 'trace-controls'; controls.append(this.pause, this.kind, this.exportButton);
     this.status.className = 'trace-status'; this.list.className = 'trace-list';
-    root.append(title, controls, this.status, this.list);
+    this.detail.className = 'trace-status'; root.append(title, controls, this.status, this.detail, this.list);
     this.render();
   }
 
@@ -56,9 +57,22 @@ export class TraceInspector {
       const kind = normalizePacketKind(row.packet.payloadType);
       const path = row.packet.mode === 'route' ? row.packet.segments.map(segment => `${segment.from.label} → ${segment.to.label}`).join(' · ') : 'Heard here; route unavailable';
       button.textContent = `${new Date(row.packet.at).toLocaleTimeString()} · ${kind} · ${path}`;
-      button.addEventListener('click', () => { this.selected = row; this.onSelect(row.packet); this.render(); });
+      button.addEventListener('click', () => { this.selected = row; this.onSelect(row.packet); this.render(); void this.loadRouteHistory(row.packet); });
       if (row === this.selected) button.dataset.selected = 'true';
       this.list.append(button);
     }
+  }
+
+  private async loadRouteHistory(packet: PacketView): Promise<void> {
+    if (packet.mode !== 'route' || packet.segments.length === 0) { this.detail.textContent = packet.mode === 'observer' ? 'Heard here; route unavailable.' : ''; return; }
+    const ids = [...new Set(packet.segments.map(segment => segment.routeId))].slice(0, 25);
+    this.detail.textContent = 'Loading retained route activity…';
+    try {
+      const response = await fetch(`/api/route-history?routes=${ids.join(',')}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('history unavailable');
+      const body = await response.json() as { routes?: Record<string, number[]>; partial?: boolean };
+      const count = ids.reduce((total, id) => total + (body.routes?.[id]?.length || 0), 0);
+      this.detail.textContent = `${count} retained observations across ${ids.length} mapped segment${ids.length === 1 ? '' : 's'} · last 7 days${body.partial ? ' · partial' : ''}`;
+    } catch { this.detail.textContent = 'Historical route activity is temporarily unavailable.'; }
   }
 }

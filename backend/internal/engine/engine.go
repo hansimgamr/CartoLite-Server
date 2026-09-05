@@ -84,6 +84,7 @@ type Engine struct {
 	routes     map[string]*privateRoute
 	feed       bool
 	lastPacket int64
+	historyJSON atomic.Value
 }
 
 func New(options Options) (*Engine, error) {
@@ -394,6 +395,10 @@ func (e *Engine) resolveAndRecord(message mqtt.Message, packet meshcore.Packet, 
 		}
 		route.PacketCount++
 		updateRouteActivity(route, message.HeardAt, payloadKind)
+		route.History = append(route.History, message.HeardAt)
+		cutoff := message.HeardAt - (7 * 24 * time.Hour).Milliseconds()
+		if len(route.History) > 200 { route.History = route.History[len(route.History)-200:] }
+		for len(route.History) > 0 && route.History[0] < cutoff { route.History = route.History[1:] }
 	}
 	e.evictRoutes()
 	return segments, len(segments) > 0
@@ -523,6 +528,14 @@ func (e *Engine) updateSnapshot(now time.Time) {
 	e.publicNodes.Store(int64(len(state.Nodes)))
 	e.publicRoutes.Store(int64(len(state.Routes)))
 	e.snapshot.Store(body)
+	history := make(map[string][]int64, len(e.routes))
+	for id, route := range e.routes { if len(route.History) > 0 { history[id] = append([]int64(nil), route.History...) } }
+	if encoded, err := json.Marshal(history); err == nil { e.historyJSON.Store(encoded) }
+}
+
+func (e *Engine) RouteHistoryJSON() []byte {
+	if value := e.historyJSON.Load(); value != nil { return value.([]byte) }
+	return []byte("{}")
 }
 
 func (e *Engine) publicStatus(now time.Time) PublicStatus {

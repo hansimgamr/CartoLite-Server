@@ -6,4 +6,6 @@ The panel exposes public event time, normalized traffic kind, route labels and m
 
 The current filtered window can be downloaded as CSV with time, normalized kind, route/observer mode, mapped segment count and escaped public labels. The export is a convenience snapshot of this browser only, not a permalink or historical archive.
 
+Mapped route timestamps are retained in the server checkpoint for up to seven days, with a bounded sample per route. `GET /api/route-history?routes=<id,...>` returns only requested opaque route IDs and receipt times, plus `partial: true`; the inspector uses it to show selected-segment activity. This is route observation history, not reconstructed packet replay or RF distance.
+
 This is a live browser window, not historical replay. Reconnect or sequence recovery clears the trace window. Route length, RF distance, delivery, latency and unique-transmission claims are intentionally unsupported.
