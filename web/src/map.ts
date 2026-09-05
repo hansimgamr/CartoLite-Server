@@ -1786,6 +1786,37 @@ export class LiveMap {
       .setLngLat([model.node.lng, model.node.lat])
       .setDOMContent(content);
     if (!popup.isOpen()) popup.addTo(this.map);
+    this.enablePopupDrag(popup, content);
+  }
+
+  private enablePopupDrag(popup: maplibregl.Popup, content: HTMLElement): void {
+    const header = content.querySelector('header');
+    const element = popup.getElement();
+    if (!header || !element || header.dataset.dragReady === 'true') return;
+    header.dataset.dragReady = 'true';
+    header.title = 'Drag to move';
+    let startX = 0;
+    let startY = 0;
+    let offsetX = 0;
+    let offsetY = 0;
+    header.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || (event.target as HTMLElement).closest('button,a')) return;
+      startX = event.clientX; startY = event.clientY;
+      header.setPointerCapture(event.pointerId);
+      const match = element.dataset.dragOffset?.match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+      offsetX = match ? Number(match[1]) : 0; offsetY = match ? Number(match[2]) : 0;
+      header.dataset.dragging = 'true';
+    });
+    header.addEventListener('pointermove', (event) => {
+      if (header.dataset.dragging !== 'true') return;
+      offsetX += event.clientX - startX; offsetY += event.clientY - startY;
+      startX = event.clientX; startY = event.clientY;
+      element.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+      element.dataset.dragOffset = `${offsetX},${offsetY}`;
+    });
+    const stop = () => { delete header.dataset.dragging; };
+    header.addEventListener('pointerup', stop);
+    header.addEventListener('pointercancel', stop);
   }
 
   private closeInspector(clearSelection: boolean): void {
