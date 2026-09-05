@@ -156,6 +156,15 @@ individual marks are too dense to read.
 
 ## Companion status console (optional)
 
+## Planned deployment markers
+
+The Quinte reverse proxy adds a map-safe `GET /api/manual-nodes` projection with
+an additional `planned` array. Draft, Planned, and Scheduled deployment records
+with both coordinates are rendered by the map as `📅` markers. The Deployment
+Planner opens `?picker=1` in a new map window; a click sends only latitude and
+longitude back to `deploy.hansimgamr.net`, where the operator can still edit or
+type the values before saving.
+
 Set `STATUS_CONSOLE_ORIGIN` to link a separate status site from the topbar and
 from each node inspector. Node ids are one-way hashes, so the inspector links by
 public label as `?node=<label>` — the receiving site should match that label
