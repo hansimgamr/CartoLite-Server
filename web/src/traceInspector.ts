@@ -91,21 +91,26 @@ export class TraceInspector {
   }
 
   private renderTicker(): void {
-    const packet = this.latest;
-    const heading = document.createElement('strong'); heading.textContent = this.connected ? '● Latest packet · connected' : '○ Latest packet · reconnecting';
-    const event = document.createElement('span');
-    const signal = document.createElement('small');
-    if (packet) {
+    const packets = this.store.all().map(row => row.packet).slice(-24);
+    const latest = packets.at(-1);
+    const heading = document.createElement('strong'); heading.textContent = this.connected ? '● Live packet chat · connected' : '○ Live packet chat · reconnecting';
+    const chat = document.createElement('div'); chat.className = 'packet-chat'; chat.setAttribute('role', 'log'); chat.setAttribute('aria-live', 'polite');
+    for (const packet of packets) {
       const kind = normalizePacketKind(packet.payloadType);
-      this.ticker.style.setProperty('--packet-color', PACKET_KIND_COLORS[kind]);
-      const age = Math.max(0, Math.floor((Date.now() - packet.at) / 1000));
+      const message = document.createElement('div'); message.className = 'packet-chat-message'; message.style.setProperty('--packet-color', PACKET_KIND_COLORS[kind]);
+      const time = document.createElement('time'); time.dateTime = new Date(packet.at).toISOString(); time.textContent = new Date(packet.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+      const body = document.createElement('span'); body.textContent = `${PACKET_KIND_LABELS[kind]} · ${packet.partial ? 'Partial · ' : ''}${packetPathLabel(packet)}`;
+      message.append(time, body); chat.append(message);
+    }
+    const signal = document.createElement('small');
+    if (latest) {
+      const age = Math.max(0, Math.floor((Date.now() - latest.at) / 1000));
       const ago = age < 60 ? `${age}s ago` : age < 3600 ? `${Math.floor(age / 60)}m ago` : `${Math.floor(age / 3600)}h ago`;
-      const path = packetPathLabel(packet);
-      event.textContent = `${PACKET_KIND_LABELS[kind]} · ${packet.partial ? "Partial path · " : ""}${path}`;
-      signal.textContent = `Observed ${ago} · ${radioLabel(packet)}`;
-      signal.title = new Date(packet.at).toLocaleString();
-    } else { event.textContent = 'Waiting for an observation'; signal.textContent = 'The log continues collecting while you are away.'; }
-    this.ticker.replaceChildren(heading, event, signal);
+      signal.textContent = `Latest ${ago} · ${radioLabel(latest)}`;
+      signal.title = new Date(latest.at).toLocaleString();
+    } else signal.textContent = 'Waiting for an observation';
+    this.ticker.replaceChildren(heading, chat, signal);
+    chat.scrollTop = chat.scrollHeight;
   }
 
   private setView(log: boolean): void {
