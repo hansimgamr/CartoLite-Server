@@ -239,14 +239,6 @@ async function start(): Promise<void> {
       },
     );
     mapView = liveMap;
-    const traceInspector = new TraceInspector(traceRoot, (packet) => {
-      if (packet.mode === 'route') {
-        const routeID = packet.segments[0]?.routeId;
-        if (routeID) liveMap.inspectRoute(routeID);
-      } else {
-        liveMap.selectNodeByID(packet.observer.id, false);
-      }
-    });
     let activeArea: AreaBounds | null = null;
     let applyAreaChange: (() => void) | undefined;
     areaControls = setupAreaControls(liveMap.map, (bounds) => {
@@ -259,6 +251,15 @@ async function start(): Promise<void> {
     animator = liveAnimator;
     const routeSonifier = new RouteSonifier(liveMap.map, packetCanvas);
     sonifier = routeSonifier;
+    const traceInspector = new TraceInspector(traceRoot, (packet) => {
+      if (packet.mode === 'route') {
+        const routeID = packet.segments[0]?.routeId;
+        if (routeID) liveMap.inspectRoute(routeID);
+      } else liveMap.selectNodeByID(packet.observer.id, false);
+    }, (packet) => { liveMap.fitPacket(packet); }, (packet) => {
+      const replay = projectPacketToArea(packet, null);
+      for (const run of replay?.runs || []) liveAnimator.add(run);
+    });
     soundVolume.value = String(Math.round(routeSonifier.getVolume() * 100));
     soundVolumeOutput.value = `${soundVolume.value}%`;
     soundScene.value = routeSonifier.getScene();

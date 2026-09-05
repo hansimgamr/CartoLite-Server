@@ -772,6 +772,19 @@ export class LiveMap {
     return true;
   }
 
+  fitPacket(packet: PacketView): boolean {
+    const endpoints = packetEndpoints(packet).filter(validEndpoint);
+    if (endpoints.length < 2) return false;
+    const bounds = new maplibregl.LngLatBounds();
+    for (const endpoint of endpoints) bounds.extend([endpoint.lng, endpoint.lat]);
+    this.map.fitBounds(bounds, {
+      padding: this.map.getContainer().clientWidth <= 620 ? 48 : 120,
+      maxZoom: Math.max(this.map.getZoom(), 8),
+      duration: this.reducedMotion ? 0 : 500,
+    });
+    return true;
+  }
+
   setRoutesVisible(visible: boolean): void {
     const started = performance.now();
     this.routesVisible = visible;

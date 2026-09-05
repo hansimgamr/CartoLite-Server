@@ -15,7 +15,7 @@ export class TraceInspector {
   private readonly exportButton = document.createElement('button');
   private readonly detail = document.createElement('p');
 
-  constructor(root: HTMLElement, private readonly onSelect: (packet: PacketView) => void) {
+  constructor(root: HTMLElement, private readonly onSelect: (packet: PacketView) => void, private readonly onFit: (packet: PacketView) => void, private readonly onReplay: (packet: PacketView) => void) {
     root.hidden = new URLSearchParams(location.search).get('panel') !== 'traces';
     root.replaceChildren();
     const title = document.createElement('h2'); title.textContent = 'Live Traces';
@@ -27,7 +27,7 @@ export class TraceInspector {
     this.kind.addEventListener('change', () => this.render());
     const controls = document.createElement('div'); controls.className = 'trace-controls'; controls.append(this.pause, this.kind, this.exportButton);
     this.status.className = 'trace-status'; this.list.className = 'trace-list';
-    this.detail.className = 'trace-status'; root.append(title, controls, this.status, this.detail, this.list);
+    this.detail.className = 'trace-status trace-detail'; root.append(title, controls, this.status, this.detail, this.list);
     this.render();
   }
 
@@ -66,13 +66,17 @@ export class TraceInspector {
   private async loadRouteHistory(packet: PacketView): Promise<void> {
     if (packet.mode !== 'route' || packet.segments.length === 0) { this.detail.textContent = packet.mode === 'observer' ? 'Heard here; route unavailable.' : ''; return; }
     const ids = [...new Set(packet.segments.map(segment => segment.routeId))].slice(0, 25);
-    this.detail.textContent = 'Loading retained route activity…';
+    this.detail.replaceChildren();
+    const actions = document.createElement('span');
+    const fit = document.createElement('button'); fit.type = 'button'; fit.textContent = 'Fit route'; fit.addEventListener('click', () => this.onFit(packet));
+    const replay = document.createElement('button'); replay.type = 'button'; replay.textContent = 'Replay (illustrative)'; replay.title = 'Visual replay only; not measured radio timing'; replay.addEventListener('click', () => this.onReplay(packet));
+    actions.append(fit, replay); this.detail.append(actions, document.createTextNode(' Loading retained route activity…'));
     try {
       const response = await fetch(`/api/route-history?routes=${ids.join(',')}`, { cache: 'no-store' });
       if (!response.ok) throw new Error('history unavailable');
       const body = await response.json() as { routes?: Record<string, number[]>; partial?: boolean };
       const count = ids.reduce((total, id) => total + (body.routes?.[id]?.length || 0), 0);
-      this.detail.textContent = `${count} retained observations across ${ids.length} mapped segment${ids.length === 1 ? '' : 's'} · last 7 days${body.partial ? ' · partial' : ''}`;
+      this.detail.append(document.createTextNode(` · ${count} retained observations across ${ids.length} mapped segment${ids.length === 1 ? '' : 's'} · last 7 days${body.partial ? ' · partial' : ''}`));
     } catch { this.detail.textContent = 'Historical route activity is temporarily unavailable.'; }
   }
 }
