@@ -123,7 +123,7 @@ export function createNodeInspectorContent(
   const title = ownerDocument.createElement('strong');
   title.textContent = model.node.label;
   const summary = ownerDocument.createElement('span');
-  summary.textContent = `${roleLabel(model.node.role)}${model.node.observer ? ' · observer' : ''}`;
+  summary.textContent = `${roleLabel(model.node.role)}${model.node.manual ? model.node.live ? ' · manual placement · live heard' : ' · manual placement · not live heard' : ''}${model.node.observer ? ' · observer' : ''}`;
   titleWrap.append(title, summary);
   header.append(titleWrap);
   if (options.mobile) {
@@ -138,7 +138,7 @@ export function createNodeInspectorContent(
   root.append(header);
 
   const facts = ownerDocument.createElement('dl');
-  appendFact(ownerDocument, facts, 'Last seen', relativeTime(model.node.lastSeen, now));
+  appendFact(ownerDocument, facts, model.node.manual && !model.node.live ? 'Placement updated' : 'Last seen', relativeTime(model.node.lastSeen, now));
   appendFact(ownerDocument, facts, 'Coordinates', `${model.node.lat.toFixed(4)}, ${model.node.lng.toFixed(4)}`);
   appendFact(ownerDocument, facts, 'Neighbours', String(model.neighbors.length));
   root.append(facts);

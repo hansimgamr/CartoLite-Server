@@ -1337,8 +1337,8 @@ export class LiveMap {
       },
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], DETAIL_ZOOM, 3.6, 9, 4.6, 12, 6.4, 16, 7.6],
-        'circle-color': ['get', 'color'],
-        'circle-stroke-color': ['case', ['get', 'observer'], '#f5cf76', '#bce9e5'],
+        'circle-color': ['case', ['get', 'manual'], '#d48d37', ['get', 'color']],
+        'circle-stroke-color': ['case', ['get', 'manual'], '#fff0b8', ['get', 'observer'], '#f5cf76', '#bce9e5'],
         'circle-stroke-width': ['case', ['get', 'observer'], 1.6, 0.9],
         'circle-opacity': nodeOpacity(false, [])
       }
@@ -2283,6 +2283,7 @@ function nodeFeature(node: NodeV2, now: number): Feature<Point> {
       mapLabel: mapGlyphLabel(node.label),
       role: node.role,
       observer: node.observer,
+      manual: Boolean(node.manual),
       lastSeen: node.lastSeen,
       color: roleColor(node.role),
       opacity: freshness(node.lastSeen, now),

@@ -13,6 +13,10 @@ export interface NodeV2 extends EndpointV2 {
   role: NodeRole;
   observer: boolean;
   lastSeen: number;
+  /** Operator-entered location, not a claim that RF traffic was heard here. */
+  manual?: boolean;
+  /** A matching live node is currently present in the MQTT topology. */
+  live?: boolean;
 }
 
 export interface RouteV2 {

@@ -2,6 +2,7 @@ import { assertStateV2, sequenceAction } from './state';
 import type {
   HelloV2,
   NodeEventV2,
+  NodeV2,
   PacketEventV2,
   ResetV2,
   StateV2,
@@ -19,6 +20,22 @@ export async function fetchState(signal?: AbortSignal): Promise<StateV2> {
   const body: unknown = await response.json();
   assertStateV2(body);
   return body;
+}
+
+/** The reverse proxy exposes only opaque map-safe manual placement fields. */
+export async function fetchManualNodes(signal?: AbortSignal): Promise<NodeV2[]> {
+  const response = await fetch('/api/manual-nodes', { cache: 'no-store', credentials: 'same-origin', signal });
+  if (!response.ok) throw new Error(`manual node request failed (${response.status})`);
+  const body: unknown = await response.json();
+  const rows = body && typeof body === 'object' && Array.isArray((body as { nodes?: unknown }).nodes)
+    ? (body as { nodes: unknown[] }).nodes : [];
+  return rows.flatMap((row): NodeV2[] => {
+    if (!row || typeof row !== 'object') return [];
+    const node = row as Partial<NodeV2>;
+    if (typeof node.id !== 'string' || typeof node.label !== 'string' || !['repeater', 'companion', 'room_server', 'sensor', 'unknown'].includes(String(node.role))
+      || !Number.isFinite(node.lat) || !Number.isFinite(node.lng) || !Number.isFinite(node.lastSeen)) return [];
+    return [{ id: node.id, label: node.label, role: node.role as NodeV2['role'], observer: false, lat: node.lat!, lng: node.lng!, lastSeen: node.lastSeen!, manual: true }];
+  });
 }
 
 export interface LiveFeedHandlers {

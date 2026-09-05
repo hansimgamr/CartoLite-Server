@@ -6,6 +6,10 @@
   extreme-scale software-rendering limitation without weakening its test.
   Make browser software rendering explicit and seed the scale fixture's camera
   independently of deployment home bounds. Add a dependency-free area cost check.
+- Optionally merge a same-origin, map-safe manual-placement feed. It is ignored
+  when unavailable; manual placements are visually distinct and never create
+  routes or packet activity. The deployment integration supplies opaque IDs,
+  labels, roles, coordinates, and a manual marker only.
 
 Deployment fork for the Quinte West / Belleville (YTR) mesh. Both additions are
 optional and default to upstream behaviour.

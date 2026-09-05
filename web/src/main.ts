@@ -1,6 +1,6 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './styles.css';
-import { fetchState, LiveFeed } from './api';
+import { fetchManualNodes, fetchState, LiveFeed } from './api';
 import { setupAreaControls } from './areaControls';
 import { RouteSonifier, type SoundScene, type SoundStatus } from './audio';
 import {
@@ -24,7 +24,7 @@ import {
 import { activityLabel, LiveStore, type MapChanges } from './state';
 import { projectPacketToArea, projectStateToArea, scopedMapChanges, type AreaBounds } from './trafficArea';
 import { normalizePacketKind, PACKET_KIND_COLORS, ROUTE_LEGEND_ITEMS } from './trafficVisuals';
-import type { PacketView, StateV2 } from './types';
+import type { NodeV2, PacketView, StateV2 } from './types';
 
 const appElement = required<HTMLElement>('app');
 const statusElement = required<HTMLElement>('status');
@@ -388,14 +388,15 @@ async function start(): Promise<void> {
       releaseScreenAwake();
     }, { once: true });
 
-    const initial = await fetchState();
+    const [initial, manualNodes] = await Promise.all([fetchState(), fetchManualNodes().catch(() => [])]);
     const liveStore = new LiveStore(initial);
     store = liveStore;
     let streamConnected = false;
     let liveFollow = false;
     let pendingFollow: PacketView | undefined;
     let lastFollowMoveAt = Number.NEGATIVE_INFINITY;
-    let scopedState = projectStateToArea(initial, activeArea);
+    const mapState = (state: Readonly<StateV2>): StateV2 => ({ ...state, nodes: mergeManualNodes(state.nodes, manualNodes) });
+    let scopedState = projectStateToArea(mapState(initial), activeArea);
     let previousDisplay: Readonly<StateV2> | undefined;
     let matchedObservations = 0;
     let lastObservedAt = 0;
@@ -469,7 +470,7 @@ async function start(): Promise<void> {
 
     const renderScoped = (state: Readonly<StateV2>, changes: MapChanges | null): void => {
       if (changes) {
-        scopedState = projectStateToArea(state, activeArea);
+        scopedState = projectStateToArea(mapState(state), activeArea);
         const delta = activeArea ? scopedMapChanges(previousDisplay, scopedState, changes) : changes;
         // Old animations must not retain a moved or removed endpoint.
         const oldNodes = changes.nodes?.length ? new Map(previousDisplay?.nodes.map((node) => [node.id, node])) : undefined;
@@ -653,6 +654,17 @@ function updateFocusChrome(focus: LiveMapFocus | null): void {
   const neighbors = `${focus.neighborCount} ${focus.neighborCount === 1 ? 'neighbor' : 'neighbors'}`;
   focusText.textContent = `${focus.label} · ${neighbors}`;
   legend.setAttribute('aria-label', `Selected node: ${focus.label}, ${neighbors}`);
+}
+
+function mergeManualNodes(liveNodes: readonly NodeV2[], manualNodes: readonly NodeV2[]): NodeV2[] {
+  const live = new Map(liveNodes.map((node) => [node.id, node]));
+  for (const manual of manualNodes) {
+    const heard = live.get(manual.id);
+    live.set(manual.id, heard
+      ? { ...heard, label: manual.label, role: manual.role, lat: manual.lat, lng: manual.lng, manual: true, live: true }
+      : { ...manual, live: false });
+  }
+  return [...live.values()];
 }
 
 function clearTrafficChrome(): void {
