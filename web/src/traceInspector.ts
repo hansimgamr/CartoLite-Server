@@ -12,6 +12,7 @@ export class TraceInspector {
   private readonly list = document.createElement('div');
   private readonly status = document.createElement('p');
   private readonly pause = document.createElement('button');
+  private readonly exportButton = document.createElement('button');
 
   constructor(root: HTMLElement, private readonly onSelect: (packet: PacketView) => void) {
     root.hidden = new URLSearchParams(location.search).get('panel') !== 'traces';
@@ -21,8 +22,9 @@ export class TraceInspector {
     const all = document.createElement('option'); all.value = ''; all.textContent = 'All kinds'; this.kind.append(all);
     for (const value of PACKET_KINDS) { const option = document.createElement('option'); option.value = value; option.textContent = value; this.kind.append(option); }
     this.pause.type = 'button'; this.pause.textContent = 'Pause list'; this.pause.addEventListener('click', () => { this.paused = !this.paused; this.pause.textContent = this.paused ? 'Resume list' : 'Pause list'; this.render(); });
+    this.exportButton.type = 'button'; this.exportButton.textContent = 'Download CSV'; this.exportButton.addEventListener('click', () => this.exportCSV());
     this.kind.addEventListener('change', () => this.render());
-    const controls = document.createElement('div'); controls.className = 'trace-controls'; controls.append(this.pause, this.kind);
+    const controls = document.createElement('div'); controls.className = 'trace-controls'; controls.append(this.pause, this.kind, this.exportButton);
     this.status.className = 'trace-status'; this.list.className = 'trace-list';
     root.append(title, controls, this.status, this.list);
     this.render();
@@ -30,6 +32,19 @@ export class TraceInspector {
 
   add(packet: PacketView): void { this.store.add(packet); if (this.paused) { this.pending += 1; this.status.textContent = `${this.pending} new observation${this.pending === 1 ? '' : 's'} · list paused`; } else this.render(); }
   reset(): void { this.store.clear(); this.selected = undefined; this.pending = 0; this.render(); }
+
+  private exportCSV(): void {
+    const filter = this.kind.value as PacketKind;
+    const rows = this.store.all().filter(row => !filter || normalizePacketKind(row.packet.payloadType) === filter);
+    const csv = ['time,kind,mode,segments,route', ...rows.map(row => {
+      const packet = row.packet;
+      const route = packet.mode === 'route' ? packet.segments.map(segment => `${segment.from.label} -> ${segment.to.label}`).join(' | ') : 'Heard here; route unavailable';
+      return [new Date(packet.at).toISOString(), normalizePacketKind(packet.payloadType), packet.mode, packet.mode === 'route' ? packet.segments.length : 0, route]
+        .map(value => `"${String(value).replaceAll('"', '""')}"`).join(',');
+    })].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'cartolite-live-traces.csv'; link.click(); URL.revokeObjectURL(url);
+  }
 
   private render(): void {
     const filter = this.kind.value as PacketKind;
