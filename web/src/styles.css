@@ -371,6 +371,7 @@ button { font: inherit; }
   bottom: max(34px, calc(env(safe-area-inset-bottom) + 30px));
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 9px;
   padding: 7px 9px;
   border-radius: 9px;
@@ -595,7 +596,7 @@ button { font: inherit; }
 :root[data-view-class="mobile"] .legend-items span { gap: 4px; }
 :root[data-view-class="mobile"] .legend[data-collapsed="true"] .legend-items { display: none; }
 :root[data-view-class="mobile"] .legend[data-focused="true"] { max-width: calc(100vw - 16px); padding: 8px 10px; }
-:root[data-view-class="mobile"] .route-legend { right: 8px; bottom: max(38px, calc(env(safe-area-inset-bottom) + 34px)); gap: 5px; padding: 5px 7px; opacity: 0.88; }
+:root[data-view-class="mobile"] .route-legend { right: 8px; bottom: max(38px, calc(env(safe-area-inset-bottom) + 34px)); max-width: calc(100vw - 16px); gap: 5px; padding: 5px 7px; opacity: 0.88; }
 :root[data-view-class="mobile"] .route-legend-label { font-size: 0; }
 :root[data-view-class="mobile"] .route-legend-label::after { content: attr(data-short); font-size: 10px; }
 :root[data-view-class="mobile"] .route-legend-swatch { width: 10px; }

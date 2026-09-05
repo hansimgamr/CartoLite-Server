@@ -27,6 +27,7 @@ import {
   decayedRouteTraffic,
   PACKET_KIND_COLORS,
   PACKET_KINDS,
+  packetKindLabel,
   payloadColor,
   ROUTE_BRIGHT_AGE_MS,
   ROUTE_MAX_AGE_MS,
@@ -1621,7 +1622,7 @@ export class LiveMap {
     this.presentTooltip(
       event,
       `${from.label} ↔ ${to.label}`,
-      `${route.lastKind} · ${packetCount.toLocaleString()} ${packetCount === 1 ? 'packet' : 'packets'} · heard ${relativeTime(route.lastHeard)}`,
+      `${packetKindLabel(route.lastKind)} · ${packetCount.toLocaleString()} ${packetCount === 1 ? 'packet' : 'packets'} · heard ${relativeTime(route.lastHeard)}`,
       'route'
     );
     return true;

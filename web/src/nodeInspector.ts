@@ -1,6 +1,6 @@
 import { isRecentNeighborRoute } from './routeFocus';
 import type { NodeRole, NodeV2, RouteV2 } from './types';
-import type { PacketKind } from './trafficVisuals';
+import { packetKindLabel, type PacketKind } from './trafficVisuals';
 
 export interface NeighborView {
   id: string;
@@ -174,7 +174,7 @@ export function createNodeInspectorContent(
     role.textContent = roleLabel(neighbor.role);
     const traffic = ownerDocument.createElement('span');
     const packets = neighbor.packetCount === 1 ? '1 packet' : `${neighbor.packetCount.toLocaleString()} packets`;
-    traffic.textContent = `${neighbor.lastKind} · ${packets} · ${relativeTime(neighbor.lastHeard, now)}`;
+    traffic.textContent = `${packetKindLabel(neighbor.lastKind)} · ${packets} · ${relativeTime(neighbor.lastHeard, now)}`;
     button.append(label, role, traffic);
     button.addEventListener('click', () => options.onSelectNeighbor(neighbor.id));
     list.append(button);

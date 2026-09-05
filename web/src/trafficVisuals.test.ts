@@ -20,6 +20,10 @@ describe('packet traffic palette', () => {
       Text: '#ff75b5',
       ACK: '#78cfff',
       Control: '#a78bfa',
+      Request: '#ff9f43',
+      Response: '#7ddc6f',
+      AnonReq: '#d8b4fe',
+      Path: '#fb7185',
       Other: '#9caebd'
     });
 
@@ -34,6 +38,10 @@ describe('packet traffic palette', () => {
     expect(normalizePacketKind('TextMessage')).toBe('Text');
     expect(normalizePacketKind('ack')).toBe('ACK');
     expect(normalizePacketKind('Control')).toBe('Control');
+    expect(normalizePacketKind('Request')).toBe('Request');
+    expect(normalizePacketKind('Response')).toBe('Response');
+    expect(normalizePacketKind('AnonReq')).toBe('AnonReq');
+    expect(normalizePacketKind('Path')).toBe('Path');
     expect(normalizePacketKind('unknown')).toBe('Other');
     expect(normalizePacketKind(undefined)).toBe('Other');
     expect(payloadColor('unknown')).toBe(PACKET_KIND_COLORS.Other);
@@ -46,6 +54,10 @@ describe('packet traffic palette', () => {
       Text: 'orbit',
       ACK: 'double',
       Control: 'tick',
+      Request: 'tick',
+      Response: 'tick',
+      AnonReq: 'tick',
+      Path: 'tick',
       Other: 'tick'
     });
     expect(packetSignature('Advert')).toBe('ripple');

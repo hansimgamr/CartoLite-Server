@@ -47,7 +47,7 @@ type RouteV2 = {
   packetCount: number;
   lastHeard: number;
   intensity: 0 | 1 | 2 | 3 | 4;
-  lastKind: "Advert" | "Trace" | "Text" | "ACK" | "Control" | "Other";
+  lastKind: "Advert" | "Trace" | "Text" | "ACK" | "Control" | "Request" | "Response" | "AnonReq" | "Path" | "Other";
   traffic: number;
 };
 ```
@@ -65,7 +65,7 @@ type RoutePacketEventV2 = {
   seq: number;
   id: string;
   at: number;
-  payloadType: "Advert" | "Trace" | "Text" | "ACK" | "Control" | "Other";
+  payloadType: "Advert" | "Trace" | "Text" | "ACK" | "Control" | "Request" | "Response" | "AnonReq" | "Path" | "Other";
   mode: "route";
   segments: Array<{ routeId: string; fromId: string; toId: string }>;
 };

@@ -1,6 +1,6 @@
 import type { PacketKind } from './trafficVisuals';
 import type { PacketView } from './types';
-import { normalizePacketKind, PACKET_KINDS } from './trafficVisuals';
+import { normalizePacketKind, PACKET_KIND_LABELS, PACKET_KINDS } from './trafficVisuals';
 import { TraceStore, type TraceRecord } from './traceStore';
 
 export class TraceInspector {
@@ -24,7 +24,7 @@ export class TraceInspector {
     const title = document.createElement('h2'); title.textContent = 'Live Traces';
     this.kind.setAttribute('aria-label', 'Traffic kind');
     const all = document.createElement('option'); all.value = ''; all.textContent = 'All kinds'; this.kind.append(all);
-    for (const value of PACKET_KINDS) { const option = document.createElement('option'); option.value = value; option.textContent = value; this.kind.append(option); }
+    for (const value of PACKET_KINDS) { const option = document.createElement('option'); option.value = value; option.textContent = PACKET_KIND_LABELS[value]; this.kind.append(option); }
     this.pause.type = 'button'; this.pause.textContent = 'Pause list'; this.pause.addEventListener('click', () => { this.paused = !this.paused; this.pause.textContent = this.paused ? 'Resume list' : 'Pause list'; this.render(); });
     this.exportButton.type = 'button'; this.exportButton.textContent = 'Download CSV'; this.exportButton.addEventListener('click', () => this.exportCSV());
     this.kind.addEventListener('change', () => this.render());
@@ -53,7 +53,7 @@ export class TraceInspector {
     const csv = ['time,kind,mode,segments,route', ...rows.map(row => {
       const packet = row.packet;
       const route = packet.mode === 'route' ? packet.segments.map(segment => `${segment.from.label} -> ${segment.to.label}`).join(' | ') : 'Heard here; route unavailable';
-      return [new Date(packet.at).toISOString(), normalizePacketKind(packet.payloadType), packet.mode, packet.mode === 'route' ? packet.segments.length : 0, route]
+      return [new Date(packet.at).toISOString(), PACKET_KIND_LABELS[normalizePacketKind(packet.payloadType)], packet.mode, packet.mode === 'route' ? packet.segments.length : 0, route]
         .map(value => `"${String(value).replaceAll('"', '""')}"`).join(',');
     })].join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -72,14 +72,15 @@ export class TraceInspector {
     for (const row of rows) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'trace-row';
       const kind = normalizePacketKind(row.packet.payloadType);
+      const kindLabel = PACKET_KIND_LABELS[kind];
       const path = row.packet.mode === 'route' ? row.packet.segments.map(segment => `${segment.from.label} → ${segment.to.label}`).join(' · ') : 'Heard here; route unavailable';
       if (this.logMode) {
         button.classList.add('trace-log-row');
         const stamp = document.createElement('time'); stamp.dateTime = new Date(row.packet.at).toISOString(); stamp.textContent = new Date(row.packet.at).toLocaleString();
-        const meta = document.createElement('span'); meta.className = 'trace-log-meta'; meta.textContent = `${kind} · ${row.packet.mode === 'route' ? `${row.packet.segments.length} hops` : 'observer'}`;
+        const meta = document.createElement('span'); meta.className = 'trace-log-meta'; meta.textContent = `${kindLabel} · ${row.packet.mode === 'route' ? `${row.packet.segments.length} hops` : 'observer'}`;
         const route = document.createElement('span'); route.className = 'trace-log-path'; route.textContent = path;
         button.append(stamp, meta, route);
-      } else button.textContent = `${new Date(row.packet.at).toLocaleTimeString()} · ${kind} · ${path}`;
+      } else button.textContent = `${new Date(row.packet.at).toLocaleTimeString()} · ${kindLabel} · ${path}`;
       button.addEventListener('click', () => { this.selected = row; this.onSelect(row.packet); this.render(); void this.loadRouteHistory(row.packet); });
       if (row === this.selected) button.dataset.selected = 'true';
       this.list.append(button);

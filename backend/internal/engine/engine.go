@@ -867,7 +867,7 @@ func routeVisible(lastHeard, now int64) bool {
 
 func validRouteKind(kind string) bool {
 	switch kind {
-	case "Advert", "Trace", "Text", "ACK", "Control", "Other":
+	case "Advert", "Trace", "Text", "ACK", "Control", "Request", "Response", "AnonReq", "Path", "Other":
 		return true
 	default:
 		return false

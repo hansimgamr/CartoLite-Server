@@ -43,3 +43,19 @@ func TestSourceIdentitiesAreProtocolScoped(t *testing.T) {
 		t.Fatal("group text incorrectly exposed a source prefix")
 	}
 }
+
+func TestPayloadNamesCoverKnownMeshCoreTypes(t *testing.T) {
+	cases := map[int]string{
+		PayloadRequest: "Request", PayloadResponse: "Response",
+		PayloadPlainText: "Text", PayloadGroupText: "Text",
+		PayloadAck: "ACK", PayloadAdvert: "Advert",
+		PayloadAnonReq: "AnonReq", PayloadPath: "Path",
+		PayloadTrace: "Trace", PayloadControl: "Control",
+		0x06: "Other", 0x0a: "Other",
+	}
+	for value, want := range cases {
+		if got := PayloadName(value); got != want {
+			t.Errorf("PayloadName(%#x) = %q, want %q", value, got, want)
+		}
+	}
+}

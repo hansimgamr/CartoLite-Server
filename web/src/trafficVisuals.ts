@@ -1,7 +1,7 @@
-export type PacketKind = 'Advert' | 'Trace' | 'Text' | 'ACK' | 'Control' | 'Other';
+export type PacketKind = 'Advert' | 'Trace' | 'Text' | 'ACK' | 'Control' | 'Request' | 'Response' | 'AnonReq' | 'Path' | 'Other';
 export type PacketSignature = 'ripple' | 'echo' | 'orbit' | 'double' | 'tick';
 
-export const PACKET_KINDS: readonly PacketKind[] = ['Advert', 'Trace', 'Text', 'ACK', 'Control', 'Other'];
+export const PACKET_KINDS: readonly PacketKind[] = ['Advert', 'Trace', 'Text', 'ACK', 'Control', 'Request', 'Response', 'AnonReq', 'Path', 'Other'];
 
 export const ROUTE_TRAFFIC_HALF_LIFE_MS = 15 * 60_000;
 export const ROUTE_TRAFFIC_MAX = 64;
@@ -14,8 +14,21 @@ export const PACKET_KIND_COLORS: Readonly<Record<PacketKind, string>> = {
   Text: '#ff75b5',
   ACK: '#78cfff',
   Control: '#a78bfa',
+  Request: '#ff9f43',
+  Response: '#7ddc6f',
+  AnonReq: '#d8b4fe',
+  Path: '#fb7185',
   Other: '#9caebd'
 };
+
+export const PACKET_KIND_LABELS: Readonly<Record<PacketKind, string>> = {
+  Advert: 'Advert', Trace: 'Trace', Text: 'Text', ACK: 'ACK', Control: 'Control',
+  Request: 'Request', Response: 'Response', AnonReq: 'Anonymous request', Path: 'Path', Other: 'Other'
+};
+
+export function packetKindLabel(kind: PacketKind): string {
+  return PACKET_KIND_LABELS[kind];
+}
 
 export const PACKET_KIND_SIGNATURES: Readonly<Record<PacketKind, PacketSignature>> = {
   Advert: 'ripple',
@@ -23,6 +36,10 @@ export const PACKET_KIND_SIGNATURES: Readonly<Record<PacketKind, PacketSignature
   Text: 'orbit',
   ACK: 'double',
   Control: 'tick',
+  Request: 'tick',
+  Response: 'tick',
+  AnonReq: 'tick',
+  Path: 'tick',
   Other: 'tick'
 };
 
@@ -31,7 +48,12 @@ export const ROUTE_LEGEND_ITEMS: readonly { kind: PacketKind; label: string; sho
   { kind: 'Trace', label: 'Trace', shortLabel: 'Trc', accessibleLabel: 'Trace' },
   { kind: 'Text', label: 'Text', shortLabel: 'Txt', accessibleLabel: 'Text' },
   { kind: 'ACK', label: 'ACK', shortLabel: 'ACK', accessibleLabel: 'ACK' },
-  { kind: 'Control', label: 'Control', shortLabel: 'Ctl', accessibleLabel: 'Control or other' }
+  { kind: 'Control', label: 'Control', shortLabel: 'Ctl', accessibleLabel: 'Control' },
+  { kind: 'Request', label: 'Request', shortLabel: 'Req', accessibleLabel: 'Request' },
+  { kind: 'Response', label: 'Response', shortLabel: 'Res', accessibleLabel: 'Response' },
+  { kind: 'AnonReq', label: 'Anonymous request', shortLabel: 'Anon', accessibleLabel: 'Anonymous request' },
+  { kind: 'Path', label: 'Path', shortLabel: 'Path', accessibleLabel: 'Path' },
+  { kind: 'Other', label: 'Other', shortLabel: 'Other', accessibleLabel: 'Unknown or reserved payload' }
 ];
 
 export function normalizePacketKind(payloadType: string | undefined): PacketKind {
@@ -41,6 +63,10 @@ export function normalizePacketKind(payloadType: string | undefined): PacketKind
   if (value.includes('ack')) return 'ACK';
   if (value.includes('advert')) return 'Advert';
   if (value.includes('control')) return 'Control';
+  if (value.includes('anon')) return 'AnonReq';
+  if (value.includes('request')) return 'Request';
+  if (value.includes('response')) return 'Response';
+  if (value.includes('path')) return 'Path';
   return 'Other';
 }
 

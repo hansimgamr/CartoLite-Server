@@ -8,7 +8,7 @@ import type {
   StateV2,
   StatusV2
 } from './types';
-import { normalizePacketKind, routeTrafficAfterPacket } from './trafficVisuals';
+import { normalizePacketKind, PACKET_KINDS, routeTrafficAfterPacket } from './trafficVisuals';
 
 export const ROUTE_BATCH_MS = 1_000;
 
@@ -254,7 +254,7 @@ function validRoute(route: RouteV2): boolean {
     && Number.isSafeInteger(route.intensity)
     && route.intensity >= 0
     && route.intensity <= 4
-    && ['Advert', 'Trace', 'Text', 'ACK', 'Control', 'Other'].includes(route.lastKind)
+    && PACKET_KINDS.includes(route.lastKind)
     && Number.isFinite(route.traffic)
     && route.traffic >= 0
     && route.traffic <= 64;

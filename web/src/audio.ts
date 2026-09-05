@@ -80,6 +80,10 @@ const VOICES: Readonly<Record<PacketKind, Voice>> = {
   Text: { root: 57, intervals: [0, 3, 5, 7, 10], brightness: 3_600, durationScale: 1.12 },
   ACK: { root: 67, intervals: [0, 2, 4, 7, 9], brightness: 5_800, durationScale: 0.72 },
   Control: { root: 64, intervals: [0, 3, 5, 7, 10], brightness: 3_200, durationScale: 1.04 },
+  Request: { root: 55, intervals: [0, 2, 5, 7, 10], brightness: 3_900, durationScale: 0.86 },
+  Response: { root: 65, intervals: [0, 4, 7, 9, 12], brightness: 5_000, durationScale: 0.82 },
+  AnonReq: { root: 59, intervals: [0, 1, 5, 8, 10], brightness: 4_200, durationScale: 0.96 },
+  Path: { root: 69, intervals: [0, 3, 7, 10, 12], brightness: 5_600, durationScale: 0.74 },
   Other: { root: 60, intervals: [0, 2, 5, 7, 9], brightness: 4_600, durationScale: 0.9 },
 };
 

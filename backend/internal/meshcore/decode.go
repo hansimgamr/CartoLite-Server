@@ -135,6 +135,10 @@ func ParseAdvert(payload []byte) (Advert, bool, error) {
 
 func PayloadName(value int) string {
 	switch value {
+	case PayloadRequest:
+		return "Request"
+	case PayloadResponse:
+		return "Response"
 	case PayloadAdvert:
 		return "Advert"
 	case PayloadTrace:
@@ -145,6 +149,10 @@ func PayloadName(value int) string {
 		return "ACK"
 	case PayloadControl:
 		return "Control"
+	case PayloadAnonReq:
+		return "AnonReq"
+	case PayloadPath:
+		return "Path"
 	default:
 		return "Other"
 	}
