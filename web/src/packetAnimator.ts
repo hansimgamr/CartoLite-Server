@@ -426,6 +426,11 @@ export class PacketAnimator {
       this.residueTimer = undefined;
       this.clearCanvas();
       this.clearResidueCanvas();
+      this.scheduledWakeCount = 0;
+      this.canvas.dataset.wakesScheduled = '0';
+      delete this.canvas.dataset.lastPacketKind;
+      delete this.canvas.dataset.lastSignature;
+      this.updateMotionMode();
     } else {
       this.requestFrame();
     }
@@ -437,6 +442,12 @@ export class PacketAnimator {
     this.lowPowerQuery.removeEventListener('change', this.handleLowPowerChange);
     this.map.off('resize', this.resize);
     this.map.off('move', this.handleMapMove);
+  }
+
+  clear(): void {
+    const paused = this.paused;
+    this.setPaused(true);
+    this.setPaused(paused);
   }
 
   private resize(): void {

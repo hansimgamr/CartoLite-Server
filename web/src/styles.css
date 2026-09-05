@@ -35,9 +35,10 @@ button { font: inherit; }
 .area-actions button[type="submit"] { background: #126458; }
 #area-panel :focus-visible, #area-clear:focus-visible { outline: 2px solid #63d9cc; outline-offset: 2px; }
 #area-link { display: inline-flex; align-items: center; min-height: 44px; color: #80e3d7; overflow-wrap: anywhere; }
-#area-summary-bar { position: absolute; top: 64px; left: 12px; right: 12px; z-index: 7; display: flex; align-items: center; gap: 8px; pointer-events: none; font-size: 12px; }
+#area-summary-bar { position: absolute; top: 64px; left: 12px; right: 12px; z-index: 7; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; pointer-events: none; font-size: 12px; }
 #area-summary { padding: 8px 10px; background: #111d24; border: 1px solid #40545e; border-radius: 8px; max-width: 270px; }
 #area-clear { pointer-events: auto; }
+#area-activity { flex-basis: 100%; width: fit-content; color: #d9e8ee; font-size: 11px; text-shadow: 0 1px 3px #000; }
 .area-handle { display: grid; place-items: center; width: 44px; height: 44px; border: 2px solid #63d9cc; border-radius: 50%; background: #111d24; color: #efffff; font-size: 22px; cursor: grab; touch-action: none; }
 @media (max-width: 599px) {
   #area-panel { top: auto; bottom: max(64px, env(safe-area-inset-bottom)); max-height: min(540px, calc(100dvh - 330px)); }

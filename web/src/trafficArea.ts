@@ -1,4 +1,5 @@
 import type { EndpointV2, PacketView, RoutePacketView, RouteSegmentView, StateV2 } from './types';
+import type { MapChanges } from './state';
 
 /** A non-wrapping Web Mercator rectangle: [[west, south], [east, north]]. */
 export type AreaBounds = [[number, number], [number, number]];
@@ -27,6 +28,20 @@ export function projectStateToArea(state: Readonly<StateV2>, area: AreaBounds | 
   const ids = new Set(nodes.map((node) => node.id));
   const routes = state.routes.filter((route) => ids.has(route.fromId) && ids.has(route.toId));
   return { ...state, nodes, routes };
+}
+
+/** Map deltas only upsert: membership changes need an authoritative replacement. */
+export function scopedMapChanges(previous: Readonly<StateV2> | undefined, next: Readonly<StateV2>, changes: MapChanges): MapChanges | null {
+  const nodes = new Set(next.nodes.map((node) => node.id));
+  const routes = new Set(next.routes.map((route) => route.id));
+  if (!previous || changes.reset || previous.nodes.length !== nodes.size || previous.routes.length !== routes.size
+    || previous.nodes.some((node) => !nodes.has(node.id)) || previous.routes.some((route) => !routes.has(route.id))) return { reset: true };
+  const result = {
+    nodes: changes.nodes?.filter((node) => nodes.has(node.id)),
+    routes: changes.routes?.filter((route) => routes.has(route.id)),
+    routeGeometry: changes.routeGeometry?.filter((id) => routes.has(id))
+  };
+  return result.nodes?.length || result.routes?.length || result.routeGeometry?.length ? result : null;
 }
 
 /** One observation, possibly several local runs; never count runs as new packets. */

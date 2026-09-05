@@ -211,6 +211,7 @@ export class LiveMap {
   private freshnessTimer: number;
   private renderEpoch = 0;
   private layersReady = false;
+  private layerEventsBound = false;
 
   constructor(
     private readonly container: HTMLElement,
@@ -258,7 +259,8 @@ export class LiveMap {
     this.container.dataset.routeRenderer = 'maplibre-webgl';
     this.updateRouteRepresentation();
     this.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
-    this.map.on('load', () => this.installLayers());
+    this.map.on('styledataloading', this.handleStyleLoading);
+    this.map.on('style.load', this.handleStyleLoad);
     this.map.on('zoom', this.updateRouteRepresentation);
     this.map.on('zoomend', this.handleZoomEnd);
     this.map.on('resize', this.handleInspectorResize);
@@ -274,7 +276,13 @@ export class LiveMap {
       this.setSelectedNode(null);
       this.hideTooltip();
     }
-    if (!this.layersReady) return;
+    if (!this.layersReady) {
+      // Search must use current scope even while the replacement style loads.
+      this.nodesByID = new Map(state.nodes.map((node) => [node.id, node]));
+      this.routesByID = new Map(state.routes.map((route) => [route.id, route]));
+      this.rebuildRouteIndex();
+      return;
+    }
     if (forceFreshness || changes?.reset || this.nodesByID.size === 0) {
       this.resetSources(state);
       return;
@@ -324,6 +332,21 @@ export class LiveMap {
     this.nodesByID = new Map(state.nodes.map((node) => [node.id, node]));
     this.routesByID = new Map(state.routes.map((route) => [route.id, route]));
     this.rebuildRouteIndex();
+    this.clearRouteInspection();
+    if (this.clusterFlashTimer !== undefined) window.clearTimeout(this.clusterFlashTimer);
+    this.clusterFlashTimer = undefined;
+    this.setHighlightedCluster(null);
+
+    // Remove stale geometry immediately; async hydration must not leave the old
+    // area's routes/heat visible while the replacement is being built.
+    this.routeTrunkFeatures.clear();
+    this.routeDetailFeatures.clear();
+    this.routeCollections = undefined;
+    this.historicalRouteLayer.setRoutes([]);
+    for (const id of [ROUTE_TRUNK_SOURCE_ID, ROUTE_DETAIL_SOURCE_ID, ROUTE_FOCUS_SOURCE_ID]) {
+      (this.map.getSource(id) as GeoJSONSource).setData(EMPTY_LINES);
+    }
+    (this.map.getSource(ACTIVITY_HEAT_SOURCE_ID) as GeoJSONSource).setData(EMPTY_POINTS);
 
     const nodes = nodeCollection(state.nodes, now);
     (this.map.getSource(NODE_SOURCE_ID) as GeoJSONSource).setData(nodes);
@@ -707,6 +730,14 @@ export class LiveMap {
     return true;
   }
 
+  stopFollow(): void {
+    this.map.stop();
+    this.lastFollowMoveAt = 0;
+    if (this.directorTimer !== undefined) window.clearTimeout(this.directorTimer);
+    this.directorTimer = undefined;
+    this.container.dataset.cameraMode = 'idle';
+  }
+
   shouldFollow(packet: PacketView): boolean {
     return packetMatchesFollow(packet, this.selectedNodeID);
   }
@@ -727,6 +758,7 @@ export class LiveMap {
   }
 
   clearSelection(): void {
+    this.clearRouteInspection();
     this.clearNodeSelection();
   }
 
@@ -842,6 +874,8 @@ export class LiveMap {
     this.map.off('zoomend', this.handleZoomEnd);
     this.map.off('resize', this.handleInspectorResize);
     this.map.off('webglcontextrestored', this.handleWebGLContextRestored);
+    this.map.off('styledataloading', this.handleStyleLoading);
+    this.map.off('style.load', this.handleStyleLoad);
     this.map.remove();
   }
 
@@ -998,6 +1032,23 @@ export class LiveMap {
   private effectiveRouteAgeMS(): number {
     return effectiveRouteWindowMS(this.routeWindow, this.map.getZoom());
   }
+
+  private handleStyleLoading = (): void => {
+    this.layersReady = false;
+    this.routeHydrationEpoch += 1;
+    this.renderEpoch += 1;
+  };
+
+  private handleStyleLoad = (): void => {
+    if (this.map.getSource(NODE_SOURCE_ID)) {
+      this.layersReady = true;
+      this.render(this.lastState, { reset: true });
+      return;
+    }
+    this.terrainLayersReady = false;
+    this.historicalRouteLayer = new HistoricalRouteLayer();
+    this.installLayers();
+  };
 
   private installLayers(): void {
     if (this.hillshadeVisible || this.terrain3D) this.ensureTerrainLayers();
@@ -1355,34 +1406,37 @@ export class LiveMap {
     this.applyFocusState();
     applyClusterVisibility(this.map, this.clustersVisible);
 
-    this.map.on('mousemove', NODE_HIT_LAYER_ID, (event) => this.showNodeTooltip(event));
-    this.map.on('mouseleave', NODE_HIT_LAYER_ID, () => {
-      // Touch browsers can synthesize this after a route tap. Do not let a
-      // late node leave hide the route tooltip that has just replaced it.
-      if (this.tooltip.dataset.kind === 'node') this.hideTooltip();
-    });
-    this.map.on('mousemove', ROUTE_HIT_LAYER_ID, (event) => {
-      if (!this.routeInspectionPinned) this.showRouteTooltip(event);
-    });
-    this.map.on('mouseleave', ROUTE_HIT_LAYER_ID, () => {
-      this.map.getCanvas().style.cursor = '';
-      if (!this.routeInspectionPinned) this.clearRouteInspection();
-    });
-    this.map.on('mousemove', 'clusters', (event) => this.highlightCluster(event));
-    this.map.on('mouseleave', 'clusters', () => {
-      if (this.clusterFlashTimer === undefined) this.setHighlightedCluster(null);
-    });
-    this.map.on('click', (event) => this.handleMapClick(event));
-    this.map.on('movestart', () => {
-      this.hideTooltip();
-      this.clearRouteInspection();
-      if (this.clusterFlashTimer === undefined) this.setHighlightedCluster(null);
-    });
-    for (const layer of [NODE_HIT_LAYER_ID, 'clusters']) {
-      this.map.on('mouseenter', layer, () => { this.map.getCanvas().style.cursor = 'pointer'; });
-      this.map.on('mouseleave', layer, () => { this.map.getCanvas().style.cursor = ''; });
+    if (!this.layerEventsBound) {
+      this.layerEventsBound = true;
+      this.map.on('mousemove', NODE_HIT_LAYER_ID, (event) => this.showNodeTooltip(event));
+      this.map.on('mouseleave', NODE_HIT_LAYER_ID, () => {
+        // Touch browsers can synthesize this after a route tap. Do not let a
+        // late node leave hide the route tooltip that has just replaced it.
+        if (this.tooltip.dataset.kind === 'node') this.hideTooltip();
+      });
+      this.map.on('mousemove', ROUTE_HIT_LAYER_ID, (event) => {
+        if (!this.routeInspectionPinned) this.showRouteTooltip(event);
+      });
+      this.map.on('mouseleave', ROUTE_HIT_LAYER_ID, () => {
+        this.map.getCanvas().style.cursor = '';
+        if (!this.routeInspectionPinned) this.clearRouteInspection();
+      });
+      this.map.on('mousemove', 'clusters', (event) => this.highlightCluster(event));
+      this.map.on('mouseleave', 'clusters', () => {
+        if (this.clusterFlashTimer === undefined) this.setHighlightedCluster(null);
+      });
+      this.map.on('click', (event) => this.handleMapClick(event));
+      this.map.on('movestart', () => {
+        this.hideTooltip();
+        this.clearRouteInspection();
+        if (this.clusterFlashTimer === undefined) this.setHighlightedCluster(null);
+      });
+      for (const layer of [NODE_HIT_LAYER_ID, 'clusters']) {
+        this.map.on('mouseenter', layer, () => { this.map.getCanvas().style.cursor = 'pointer'; });
+        this.map.on('mouseleave', layer, () => { this.map.getCanvas().style.cursor = ''; });
+      }
+      this.map.on('mouseenter', ROUTE_HIT_LAYER_ID, () => { this.map.getCanvas().style.cursor = 'pointer'; });
     }
-    this.map.on('mouseenter', ROUTE_HIT_LAYER_ID, () => { this.map.getCanvas().style.cursor = 'pointer'; });
     this.layersReady = true;
     if (this.terrain3D) this.setTerrain3D(true);
     this.render(this.lastState, { reset: true }, true);

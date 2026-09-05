@@ -128,7 +128,7 @@ degrades to upstream behaviour rather than pointing the map at nothing.
 The value applies to the initial view and to the Reset control. A returning
 visitor's own saved view still takes precedence.
 
-## Traffic area preset (optional preview)
+## Traffic area preset (optional)
 
 `AREA_PRESET_ID`, `AREA_PRESET_LABEL` and `AREA_PRESET_BOUNDS` configure one
 operator-defined display rectangle, separately from `HOME_BOUNDS` and the MQTT
@@ -136,9 +136,9 @@ operator-defined display rectangle, separately from `HOME_BOUNDS` and the MQTT
 default; changes require rebuilding the frontend/container. The source contains
 no regional default. See [area controls and validation](traffic-area.md).
 
-R2 is a boundary preview only, clearly labelled in the UI. It must not be
-represented as filtering the displayed traffic. R3 integrates the scope; R4
-performs release checks before deploying it.
+R3 integrates the area into all display consumers. It does not restrict the
+public API or MQTT intake. R4 still performs full release checks and backup
+before deploying the source checkpoint to a running instance.
 
 ## Layer defaults
 

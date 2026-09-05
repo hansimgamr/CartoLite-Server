@@ -44,7 +44,7 @@
             <span>Layers</span>
           </button>
           <div id="layers-panel" class="layers-panel glass">
-            <button id="area-button" class="control-button" type="button" aria-label="Traffic area preview" aria-expanded="false" aria-controls="area-panel">
+            <button id="area-button" class="control-button" type="button" aria-label="Traffic area" aria-expanded="false" aria-controls="area-panel">
               <svg class="control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 4v16M4 8h16" /></svg><span>Area</span>
             </button>
             <div id="find-control" class="find-control">
@@ -136,9 +136,10 @@
       </section>
       <section id="area-summary-bar" aria-label="Selected traffic area">
         <span id="area-summary"></span><button id="area-clear" type="button" hidden>Clear area</button>
+        <span id="area-activity" role="status" hidden></span>
       </section>
       <section id="area-panel" aria-labelledby="area-title" hidden>
-        <h2 id="area-title">Traffic area <small>Boundary preview</small></h2>
+        <h2 id="area-title">Traffic area <small>Filter local observed hops</small></h2>
         <form id="area-form" novalidate>
           <label for="area-mode">Area</label>
           <select id="area-mode"><option value="all">All received traffic</option><option value="custom">Custom area</option></select>

@@ -370,6 +370,23 @@ export class RouteSonifier {
     this.waves.clear();
   }
 
+  clear(): void {
+    this.stopActive();
+    // Disconnect the old delay buffer as well as scheduled oscillators.
+    this.ambience?.disconnect();
+    this.ambience = undefined;
+    if (this.context && this.master) this.ambience = this.createAmbience(this.context, this.master);
+  }
+
+  private createAmbience(context: AudioContext, master: GainNode): DelayNode {
+    const ambience = context.createDelay(0.25);
+    ambience.delayTime.value = 0.105;
+    const level = context.createGain();
+    level.gain.value = 0.12;
+    ambience.connect(level).connect(master);
+    return ambience;
+  }
+
   private createContext(): AudioContext {
     const Context = audioContextConstructor();
     if (!Context) throw new Error('Web Audio is unavailable');
@@ -383,11 +400,7 @@ export class RouteSonifier {
     compressor.attack.value = 0.003;
     compressor.release.value = 0.2;
     master.connect(compressor).connect(context.destination);
-    const ambience = context.createDelay(0.25);
-    ambience.delayTime.value = 0.105;
-    const ambienceLevel = context.createGain();
-    ambienceLevel.gain.value = 0.12;
-    ambience.connect(ambienceLevel).connect(master);
+    const ambience = this.createAmbience(context, master);
     context.onstatechange = () => {
       if (context.state !== 'running') this.enabled = false;
       this.notify();
@@ -483,7 +496,8 @@ export class RouteSonifier {
     const now = this.context?.currentTime;
     for (const oscillator of this.active) {
       try {
-        oscillator.stop(now === undefined ? undefined : now + 0.015);
+        oscillator.disconnect();
+        oscillator.stop(now);
       } catch {
         // It may already have ended between iteration and stop().
       }

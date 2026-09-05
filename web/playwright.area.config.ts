@@ -4,7 +4,7 @@ import base from './playwright.config';
 // Isolated, synthetic UI checks; no broker, production server or tile key.
 export default defineConfig({
   ...base,
-  testMatch: /area-controls\.spec\.ts/,
+  testMatch: /area-(controls|traffic)\.spec\.ts/,
   projects: [
     ...base.projects!.map(({ name, use }) => ({ name, use })),
     { name: 'small-phone', use: { viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true } }

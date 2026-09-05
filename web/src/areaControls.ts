@@ -3,8 +3,10 @@ import { areaLink, areaPreset, loadAreaSelection, moveArea, saveAreaSelection, s
 import { browserStorage } from './preferences';
 import { parseAreaBounds, type AreaBounds } from './trafficArea';
 
-/** R2 is an explicit boundary preview. R3 will connect selected bounds to traffic consumers. */
-export function setupAreaControls(map: MapLibreMap): { fit: () => void; destroy: () => void } {
+/** Only Apply/Clear emit a selection; editing a draft never filters traffic. */
+export function setupAreaControls(map: MapLibreMap, onChange: (bounds: AreaBounds | null) => void): {
+  selectedBounds: () => AreaBounds | null; fit: () => void; destroy: () => void
+} {
   const preset = areaPreset(import.meta.env.VITE_AREA_PRESET_ID, import.meta.env.VITE_AREA_PRESET_LABEL, import.meta.env.VITE_AREA_PRESET_BOUNDS);
   const storage = browserStorage();
   const initial = loadAreaSelection(location.search, storage, preset);
@@ -47,9 +49,9 @@ export function setupAreaControls(map: MapLibreMap): { fit: () => void; destroy:
     if (!area) return;
     const rect = panel.getBoundingClientRect();
     const portrait = window.innerWidth < 600;
-    const padding = panel.hidden ? { top: 140, right: 50, bottom: 65, left: 50 } : portrait
-      ? { top: 140, right: 40, bottom: rect.height + 85, left: 40 }
-      : { top: 140, right: rect.width + 40, bottom: 65, left: 45 };
+    const padding = panel.hidden ? { top: 152, right: 50, bottom: 65, left: 50 } : portrait
+      ? { top: 152, right: 40, bottom: rect.height + 85, left: 40 }
+      : { top: 152, right: rect.width + 40, bottom: 65, left: 45 };
     map.fitBounds(area, { padding, maxZoom: 14, duration: 0 });
   };
   const syncFields = (): void => {
@@ -92,10 +94,10 @@ export function setupAreaControls(map: MapLibreMap): { fit: () => void; destroy:
   };
   const updateSummary = (): void => {
     const label = selected === 'all' ? 'All received traffic' : selected === preset?.id ? preset.label : 'Custom area';
-    summary.textContent = `${label} · boundary preview only`;
+    summary.textContent = selected === 'all' ? label : `${label} · local observed hops`;
     clear.hidden = selected === 'all';
     button.classList.toggle('selected', selected !== 'all');
-    button.title = `Area: ${label} (preview)`;
+    button.title = `Area: ${label}`;
     link.href = areaLink(location.href, selected);
   };
   const close = (): void => {
@@ -103,10 +105,11 @@ export function setupAreaControls(map: MapLibreMap): { fit: () => void; destroy:
     removeMarkers(); draw(); button.focus();
   };
   const persist = (): void => {
-    status.textContent = saveAreaSelection(storage, selected) ? 'Boundary saved. Traffic filtering arrives in R3.' : 'Boundary selected for this visit. Browser storage is unavailable.';
+    status.textContent = saveAreaSelection(storage, selected) ? 'Area saved. Display updated.' : 'Area selected for this visit. Browser storage is unavailable.';
     try { history.replaceState(null, '', areaLink(location.href, selected)); }
     catch { status.textContent += ' Address could not be updated; use the area link.'; }
     updateSummary();
+    onChange(selectionBounds(selected, preset));
   };
   const setDraft = (): void => {
     error.textContent = '';
@@ -156,7 +159,7 @@ export function setupAreaControls(map: MapLibreMap): { fit: () => void; destroy:
   const loadedStyle = (): void => { styleReady = true; draw(); };
   map.on('styledataloading', loadingStyle);
   map.on('style.load', loadedStyle);
-  status.textContent = initial.warning || 'Preview only: traffic is not filtered yet.';
+  status.textContent = initial.warning || 'Both ends of a hop must be inside. Local receptions do not prove a local packet origin. Apply to update the display.';
   updateSummary(); draw();
-  return { fit, destroy: () => { events.abort(); panel.hidden = true; button.disabled = true; removeMarkers(); map.off('styledataloading', loadingStyle); map.off('style.load', loadedStyle); } };
+  return { selectedBounds: () => selectionBounds(selected, preset), fit, destroy: () => { events.abort(); panel.hidden = true; button.disabled = true; removeMarkers(); map.off('styledataloading', loadingStyle); map.off('style.load', loadedStyle); } };
 }

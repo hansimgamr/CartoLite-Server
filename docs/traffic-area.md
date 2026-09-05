@@ -1,7 +1,7 @@
 # Geographic traffic projection
 
-Status: R2 boundary-preview checkpoint. Controls select and outline an area;
-traffic is explicitly **not filtered yet**. Live integration follows in R3.
+Status: R3 display integration implemented. The applied area filters topology
+and every live display consumer. Pi release remains a separate R4 approval.
 
 `web/src/trafficArea.ts` projects the existing sanitized schema v2 state and
 resolved packet views into a rectangular display area. It adds no dependency,
@@ -29,14 +29,12 @@ snapshots and route batches unfiltered. Never replace the store with a projected
 snapshot. Global feed status remains global; a quiet area is not a disconnected
 feed. This display filter is not an access-control boundary.
 
-## Following checkpoints
+## Release gate
 
-R2 adds validated area controls, preferences, an outline and deployment-specific
-preset configuration. These are now implemented. R3 connects all map layers, search, focus, animation,
-sound and activity indicators to the same projection. Switching scope must clear
-pending effects and remove old geometry; filtered upserts alone cannot do that.
-R4 performs end-to-end/recovery, privacy, performance and release checks before
-deployment. R2 does not change visible traffic.
+R1 provided projections, R2 the editor, and R3 connects topology, search/focus,
+animation, sound, local observations and Follow. R4 still performs full backend,
+privacy, performance, production integration and backup/release checks before
+deployment. A completed source checkpoint is not a claim of a live Pi release.
 
 ## Area controls (R2)
 
@@ -66,11 +64,60 @@ excluding `all` and `custom`; labels must be nonempty and at most 60 characters.
 Bounds use the same validation as the home-view bounds but need not match them.
 
 `areaSelection.ts` handles validation/persistence and `areaControls.ts` handles
-the editor and MapLibre outline. R3 should consume the applied selection only,
-never an unsaved draft, and remove the explicit preview wording only after every
-traffic consumer uses the same scope.
+the editor and MapLibre outline. Only Apply/Clear notify the traffic consumers;
+unsaved drafts change the outline, not the traffic filter.
 
-## R2 verification
+## Integrated display (R3)
+
+- The authoritative `LiveStore` always receives full snapshots and events.
+  `main.ts` projects them immediately before map rendering or packet dispatch.
+  Excluded events still advance the SSE cursor, preventing false recovery gaps.
+- Nodes, historical routes, heat, clusters, search and inspection share the
+  projected snapshot. `scopedMapChanges` filters ordinary deltas; additions or
+  removals of membership force source replacement because upserts cannot remove
+  old geometry or restore newly eligible existing routes.
+- Replacement clears stale WebGL routes and GeoJSON/heat sources before async
+  route hydration. All async work is epoch-guarded. Style replacement restores
+  scoped sources and the outline without rebinding click handlers. Existing
+  route-age windows continue to intersect the area filter.
+- One matching observation may yield multiple separate local runs for animation
+  and sound, but increments the live counter once. Follow receives one qualifying
+  run, never a fabricated route bridging omitted hops. Observer pulses mean a
+  local reception, not a known local packet origin.
+- Area changes clear selections/search, Follow queues, animations, residue,
+  node wakes, pending sound (including the delay buffer), and UI pulses/counters.
+  Node coordinate changes and authoritative replacements also clear transient
+  effects. A reconnect starts a fresh live-observation counter; snapshots do not
+  imply replayed observations or a unique RF packet count.
+- Feed connectivity stays global. With a selected area, the top status reports
+  Connected/Reconnecting/Feed offline, while the area line reports no observations
+  or the matching count and last event time since selection/reconnect. An empty
+  area never makes a connected feed appear offline.
+
+The filtered path scans the current nodes/routes on batched topology updates;
+normal unchanged-membership deltas remain incremental. R4 must profile realistic
+traffic before adding a membership index or making performance claims.
+
+## R3 checks
+
+The dedicated browser configuration now includes `area-traffic.spec.ts` as well
+as the editor checks. It exercises the real LiveStore/LiveFeed browser code with
+synthetic events and snapshots, inspects actual rendered WebGL route data and
+GeoJSON sources, and checks packet/audio dispatch, outside-event suppression,
+split observation counting, selection cleanup, node movement, cursor-gap recovery,
+style replacement, and route-age intersection. Module instrumentation exists only
+in the test-served responses; no debugging globals ship in the production bundle.
+
+This synthetic harness is not the production MQTT/SSE or tile-service release
+smoke test. The unchanged backend and public schema still require the R4 release
+suite. No broker messages, credentials or runtime state are used as fixtures.
+
+R3 checkpoint: all 129 frontend tests passed across 12 files, all 30 synthetic
+browser checks passed across five viewport profiles, and TypeScript/production
+build passed. The build still reports its bundle-size advisory. The standard
+browser suite excludes this separately configured synthetic area harness.
+
+## R2 verification (historical checkpoint)
 
 Run the isolated browser checks from `web/` with:
 
@@ -90,7 +137,7 @@ R2 checkpoint: 127 frontend tests and 15 browser checks passed; TypeScript and
 production build passed. Vite retains its bundle-size advisory. No Pi release
 or full backend/integration release suite was performed in this stage.
 
-## R1 verification
+## R1 verification (historical checkpoint)
 
 Synthetic tests in `web/src/trafficArea.test.ts` cover invalid bounds, edges,
 crossing routes, moved/missing coordinates, observer receptions, mixed and

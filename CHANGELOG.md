@@ -26,15 +26,18 @@ optional and default to upstream behaviour.
   region's scale, cover the individual nodes and routes a reader came for. A
   stored per-visitor choice still wins.
 - Title the browser tab `CartoQuinte`.
-- Add tested geographic state/packet projection helpers for planned area
-  controls. This is a logic-only checkpoint; filtering is not yet connected to
-  the UI or live display. See [traffic-area contract](docs/traffic-area.md).
-- Add Area boundary-preview controls with an optional deployment preset,
+- Add tested geographic state/packet projections. See the
+  [traffic-area contract](docs/traffic-area.md).
+- Add Area controls with an optional deployment preset,
   touch-draggable custom rectangle, coordinate fields, Apply/Cancel/Clear,
-  validated share links and optional browser persistence. Traffic filtering
-  remains deferred to R3 and is explicitly labelled as a preview.
+  validated share links and optional browser persistence.
 - Keep map, layer and sound startup usable when browser storage access itself
   throws. Restore compact layer labels and keep menus above the area summary.
+- Apply the area to topology, heat, clusters, search/focus, live runs, sound,
+  observation counts and Follow while retaining complete SSE sequencing.
+  Clear stale geometry and pending effects on scope changes; preserve filtering
+  through node movement, recovery and style replacement. Keep feed health
+  separate from local activity. R4 deployment/release checks remain pending.
 
 ## 0.1.0 - 2026-09-02
 

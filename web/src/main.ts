@@ -21,9 +21,10 @@ import {
   type UiPreferences,
   type ViewClass
 } from './preferences';
-import { activityLabel, LiveStore } from './state';
+import { activityLabel, LiveStore, type MapChanges } from './state';
+import { projectPacketToArea, projectStateToArea, scopedMapChanges, type AreaBounds } from './trafficArea';
 import { normalizePacketKind, PACKET_KIND_COLORS, ROUTE_LEGEND_ITEMS } from './trafficVisuals';
-import type { PacketView } from './types';
+import type { PacketView, StateV2 } from './types';
 
 const appElement = required<HTMLElement>('app');
 const statusElement = required<HTMLElement>('status');
@@ -67,6 +68,7 @@ const aboutButton = required<HTMLButtonElement>('about-button');
 const aboutDialog = required<HTMLDialogElement>('about-dialog');
 const aboutClose = required<HTMLButtonElement>('about-close');
 const lastUpdate = required<HTMLElement>('last-update');
+const areaActivity = required<HTMLElement>('area-activity');
 
 const storage = browserStorage();
 let uiPreferences: UiPreferences = loadUiPreferences(storage);
@@ -76,6 +78,7 @@ let soundPulseTimer: number | undefined;
 let scheduledNoteCount = 0;
 let activeViewClass: ViewClass = viewClass();
 let trafficWakeTimer: number | undefined;
+let trafficPulseTimer: number | undefined;
 let recentTraffic: number[] = [];
 let screenWakeLock: ScreenWakeLockSentinel | undefined;
 let screenWakeLockRequest: Promise<void> | undefined;
@@ -234,7 +237,13 @@ async function start(): Promise<void> {
       },
     );
     mapView = liveMap;
-    areaControls = setupAreaControls(liveMap.map);
+    let activeArea: AreaBounds | null = null;
+    let applyAreaChange: (() => void) | undefined;
+    areaControls = setupAreaControls(liveMap.map, (bounds) => {
+      activeArea = bounds;
+      applyAreaChange?.();
+    });
+    activeArea = areaControls.selectedBounds();
     const packetCanvas = required<HTMLCanvasElement>('packet-canvas');
     const liveAnimator = new PacketAnimator(liveMap.map, packetCanvas);
     animator = liveAnimator;
@@ -386,6 +395,10 @@ async function start(): Promise<void> {
     let liveFollow = false;
     let pendingFollow: PacketView | undefined;
     let lastFollowMoveAt = Number.NEGATIVE_INFINITY;
+    let scopedState = projectStateToArea(initial, activeArea);
+    let previousDisplay: Readonly<StateV2> | undefined;
+    let matchedObservations = 0;
+    let lastObservedAt = 0;
 
     mapElement.dataset.followDwellMs = String(LIVE_FOLLOW_MIN_INTERVAL_MS);
 
@@ -425,6 +438,15 @@ async function start(): Promise<void> {
     };
     setLiveFollow(false);
 
+    const clearTransient = (): void => {
+      clearFollowQueue();
+      liveMap.stopFollow();
+      liveAnimator.clear();
+      routeSonifier.clear();
+      clearTrafficChrome();
+    };
+    liveMap.map.on('styledataloading', clearTransient);
+
     liveMap.map.on('dragstart', () => setLiveFollow(false));
     liveMap.map.on('zoomstart', (event) => {
       if (event.originalEvent) setLiveFollow(false);
@@ -432,23 +454,55 @@ async function start(): Promise<void> {
 
     const updateStatus = (): void => {
       const display = activityLabel(liveStore.snapshot, streamConnected);
-      statusElement.dataset.state = display.state;
-      statusText.textContent = display.text;
-      statusElement.title = `${liveStore.snapshot.nodes.length} nodes · ${liveStore.snapshot.routes.length} routes`;
+      const scopedConnected = activeArea && streamConnected && liveStore.snapshot.status.feed === 'connected';
+      statusElement.dataset.state = scopedConnected ? 'quiet' : display.state;
+      statusText.textContent = scopedConnected ? 'Connected' : display.text;
+      statusElement.title = `${scopedState.nodes.length} nodes · ${scopedState.routes.length} routes${activeArea ? ' in area; feed connectivity is global' : ''}`;
+      areaActivity.hidden = !activeArea;
+      areaActivity.textContent = matchedObservations
+        ? `${matchedObservations} live observations · last ${new Date(lastObservedAt).toLocaleTimeString()}`
+        : 'No traffic observed in this area';
+      areaActivity.title = 'Since selection or reconnect. One count per received observation, not per hop or unique RF transmission.';
+      areaActivity.dataset.observations = String(matchedObservations);
+      areaActivity.dataset.lastObservedAt = String(lastObservedAt);
     };
 
-    liveStore.subscribe((state, changes) => {
-      if (changes) liveMap.render(state, changes);
+    const renderScoped = (state: Readonly<StateV2>, changes: MapChanges | null): void => {
+      if (changes) {
+        scopedState = projectStateToArea(state, activeArea);
+        const delta = activeArea ? scopedMapChanges(previousDisplay, scopedState, changes) : changes;
+        // Old animations must not retain a moved or removed endpoint.
+        const oldNodes = changes.nodes?.length ? new Map(previousDisplay?.nodes.map((node) => [node.id, node])) : undefined;
+        const moved = changes.nodes?.some((node) => {
+          const old = oldNodes?.get(node.id);
+          return old && (old.lat !== node.lat || old.lng !== node.lng);
+        });
+        if (changes.reset || moved) clearTransient();
+        previousDisplay = scopedState;
+        if (delta) liveMap.render(scopedState, delta);
+        if (!findPanel.hidden && (changes.reset || changes.nodes?.length)) renderNodeSearch();
+      }
       updateStatus();
-    });
+    };
+    applyAreaChange = (): void => {
+      matchedObservations = 0;
+      lastObservedAt = 0;
+      setLiveFollow(false);
+      liveMap.clearSelection();
+      nodeSearch.value = '';
+      nodeSearchResults.replaceChildren();
+      closeFindPanel();
+      renderScoped(liveStore.snapshot, { reset: true });
+    };
+    liveStore.subscribe(renderScoped);
     const savedView = loadSavedView(storage, activeViewClass);
     if (savedView) {
-      mapElement.dataset.viewSource = liveMap.restore(savedView.center, savedView.zoom, initial.nodes)
+      mapElement.dataset.viewSource = liveMap.restore(savedView.center, savedView.zoom, scopedState.nodes)
         ? 'saved'
         : 'home-no-activity';
     } else {
       mapElement.dataset.viewSource = 'home';
-      liveMap.home(initial.nodes);
+      liveMap.home(scopedState.nodes);
     }
 
     areaControls.fit();
@@ -487,13 +541,14 @@ async function start(): Promise<void> {
         layersSummary.style.display = next === 'desktop' ? 'none' : '';
         const restored = loadSavedView(storage, next);
         if (restored) {
-          mapElement.dataset.viewSource = liveMap.restore(restored.center, restored.zoom, liveStore.snapshot.nodes)
+          mapElement.dataset.viewSource = liveMap.restore(restored.center, restored.zoom, scopedState.nodes)
             ? 'saved'
             : 'home-no-activity';
         } else {
           mapElement.dataset.viewSource = 'home';
-          liveMap.home(liveStore.snapshot.nodes);
+          liveMap.home(scopedState.nodes);
         }
+        if (activeArea) areaControls?.fit();
       }, 160);
     });
 
@@ -506,20 +561,31 @@ async function start(): Promise<void> {
         liveStore.upsertNode(event.node, event.seq);
       },
       onPacket(event) {
-        const packet = liveStore.applyPacket(event);
+        // Always apply the full event first, including every excluded sequence.
+        const packet = projectPacketToArea(liveStore.applyPacket(event), activeArea);
         lastUpdate.textContent = formatUpdate(event.at);
         if (!packet) return;
-        liveAnimator.add(packet);
-        const scheduled = routeSonifier.play(packet);
+        matchedObservations += 1;
+        lastObservedAt = Math.max(lastObservedAt, packet.at);
+        let scheduled = 0;
+        for (const run of packet.runs) {
+          liveAnimator.add(run);
+          scheduled += routeSonifier.play(run);
+        }
         if (scheduled > 0) pulseSoundChrome(scheduled);
         pulseTrafficChrome(packet.payloadType);
-        queueLiveFollow(packet);
+        // Follow one local run, never the excluded connection between runs.
+        const follow = packet.runs.find((run) => liveMap.shouldFollow(run));
+        if (follow) queueLiveFollow(follow);
+        updateStatus();
       },
       onStatus(event) {
         liveStore.updateStatus(event.status, event.seq);
       },
       async recover() {
         const snapshot = await fetchState();
+        matchedObservations = 0;
+        lastObservedAt = 0;
         liveStore.replace(snapshot);
         return snapshot;
       },
@@ -556,7 +622,8 @@ async function start(): Promise<void> {
     soundScene.addEventListener('change', () => routeSonifier.setScene(soundScene.value as SoundScene));
     resetButton.addEventListener('click', () => {
       setLiveFollow(false);
-      liveMap.home(liveStore.snapshot.nodes);
+      if (activeArea) areaControls?.fit();
+      else liveMap.home(scopedState.nodes);
     });
     lastUpdate.textContent = formatUpdate(initial.serverTime);
   } catch (error) {
@@ -588,6 +655,21 @@ function updateFocusChrome(focus: LiveMapFocus | null): void {
   legend.setAttribute('aria-label', `Selected node: ${focus.label}, ${neighbors}`);
 }
 
+function clearTrafficChrome(): void {
+  for (const timer of [trafficWakeTimer, trafficPulseTimer, soundPulseTimer]) if (timer !== undefined) window.clearTimeout(timer);
+  trafficWakeTimer = trafficPulseTimer = soundPulseTimer = undefined;
+  recentTraffic = [];
+  lastTrafficPulseAt = -Infinity;
+  scheduledNoteCount = 0;
+  soundActivity.dataset.scheduled = '0';
+  trafficMeter.dataset.level = '0';
+  appElement.classList.remove('traffic-awake');
+  delete appElement.dataset.trafficKind;
+  topbar.classList.remove('traffic-pulse');
+  soundButton.classList.remove('sounding');
+  soundActivity.classList.remove('active');
+}
+
 function pulseTrafficChrome(payloadType: string | undefined): void {
   const now = performance.now();
   recentTraffic = recentTraffic.filter((timestamp) => now - timestamp < 3_000);
@@ -611,7 +693,7 @@ function pulseTrafficChrome(payloadType: string | undefined): void {
     topbar.classList.remove('traffic-pulse');
     void topbar.offsetWidth;
     topbar.classList.add('traffic-pulse');
-    window.setTimeout(() => topbar.classList.remove('traffic-pulse'), 720);
+    trafficPulseTimer = window.setTimeout(() => { topbar.classList.remove('traffic-pulse'); trafficPulseTimer = undefined; }, 720);
   }
 }
 

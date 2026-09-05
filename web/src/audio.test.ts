@@ -150,6 +150,35 @@ describe('route hop sonification', () => {
     }
   });
 
+  it('clears current/future oscillators and the delay buffer without disabling sound', async () => {
+    const original = window.AudioContext;
+    Object.defineProperty(window, 'AudioContext', { configurable: true, value: FakeAudioContext });
+    const viewport = document.createElement('div');
+    Object.defineProperties(viewport, { clientWidth: { value: 100 }, clientHeight: { value: 100 } });
+    const sonifier = new RouteSonifier(projector as never, viewport);
+    const internals = sonifier as unknown as { active: Set<OscillatorNode>; ambience: DelayNode };
+    const route = packet([endpoint('a', 10, 50), endpoint('b', 50, 50), endpoint('c', 90, 50)]);
+    try {
+      await sonifier.setEnabled(true);
+      expect(sonifier.play(route)).toBe(2);
+      const voices = [...internals.active];
+      const delay = internals.ambience;
+      sonifier.clear();
+      expect(internals.active.size).toBe(0);
+      for (const voice of voices) {
+        expect(voice.disconnect).toHaveBeenCalled();
+        expect(voice.stop).toHaveBeenLastCalledWith(0);
+      }
+      expect(delay.disconnect).toHaveBeenCalled();
+      expect(internals.ambience).not.toBe(delay);
+      expect(sonifier.status()).toBe('on');
+      expect(sonifier.play(route)).toBe(2);
+    } finally {
+      sonifier.destroy();
+      Object.defineProperty(window, 'AudioContext', { configurable: true, value: original });
+    }
+  });
+
   it('unlocks suspended Android audio during the enabling tap without adding a tone', async () => {
     const original = window.AudioContext;
     FakeAudioContext.initialState = 'suspended';

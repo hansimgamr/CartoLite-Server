@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { assertStateV2, LiveStore, ROUTE_BATCH_MS, sequenceAction } from './state';
-import { parseAreaBounds, pointInArea, projectPacketToArea, projectStateToArea, type AreaBounds } from './trafficArea';
+import { parseAreaBounds, pointInArea, projectPacketToArea, projectStateToArea, scopedMapChanges, type AreaBounds } from './trafficArea';
 import type { NodeV2, PacketEventV2, RoutePacketView, RouteSegmentView, RouteV2, StateV2 } from './types';
 
 // Entirely synthetic topology; no live nodes or broker data.
@@ -41,6 +41,18 @@ describe('area validation and containment', () => {
 });
 
 describe('state projection', () => {
+  it('replaces membership changes, but filters ordinary deltas without resetting the map', () => {
+    const local = projectStateToArea(initial, area);
+    expect(scopedMapChanges(undefined, local, {})).toEqual({ reset: true });
+    expect(scopedMapChanges(local, local, { reset: true })).toEqual({ reset: true });
+    expect(scopedMapChanges(local, local, { nodes: [west], routes: [route(west, east)], routeGeometry: ['west-east'] })).toBeNull();
+    expect(scopedMapChanges(local, local, { nodes: [a, west], routes: [route(a, b), route(west, east)], routeGeometry: ['a-b', 'west-east'] }))
+      .toEqual({ nodes: [a], routes: [route(a, b)], routeGeometry: ['a-b'] });
+    const moved = projectStateToArea({ ...initial, nodes: initial.nodes.map((value) => value.id === 'b' ? { ...value, lng: 13 } : value) }, area);
+    expect(scopedMapChanges(local, moved, { nodes: [b] })).toEqual({ reset: true });
+    expect(scopedMapChanges(moved, local, { nodes: [b] })).toEqual({ reset: true });
+    expect(scopedMapChanges(local, { ...local, nodes: [a, b, c, { ...d, id: 'replacement' }] }, {})).toEqual({ reset: true });
+  });
   it('keeps only local endpoints and routes without mutating authoritative state or feed status', () => {
     const before = structuredClone(initial);
     const view = projectStateToArea(initial, area);
