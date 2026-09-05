@@ -11,3 +11,12 @@ The lower-left Latest packet card appears on both map views and updates independ
 Selecting a saved route offers Fit route and Replay (illustrative) using retained endpoint coordinates. Segment timestamps under the selected event remain sampled, partial route history from `/api/route-history`, not packet-level timing or a measured RF replay.
 
 Verification: `npm test`, `npm run build`, Go tests/vet/race and packet-history checkpoint/privacy tests. On a phone, open both panels, pause the list, confirm Latest packet continues updating, switch away and return, then reload and check the Log for the same observation IDs. Verify desktop, phone portrait and short landscape layouts.
+
+### Verified release checkpoint - 2026-09-05
+
+- Frontend: 130 tests passed; production TypeScript/Vite and Go image build passed.
+- Backend: all Go tests and vet passed, including history retention, checkpoint restore and public-field checks. Race tests were attempted but the Pi kernel has a 39-bit VMA range unsupported by ThreadSanitizer (requires 48); run the race suite on a supported CI host.
+- Isolated synthetic MQTT integration/privacy smoke passed; five observations and their radio values survived a graceful container restart with unchanged IDs.
+- Live browser verification: all 15 baseline rows remained after reload and after the production restart; newer observations were merged. Latest packet continued updating while the log was paused (17 pending arrivals), and remained visible on the regular map.
+- At 390x844 and 844x390, DOM bounding-box checks confirmed the node sheet, log and latest-packet card stayed within the viewport without overlap. Navigation and mobile map controls use separate rows on narrow phones.
+- Implementation checkpoints: 37e6067 (history and live card), 14495a8 (responsive layout). Container healthy after deployment.
