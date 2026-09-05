@@ -3,6 +3,11 @@ import type { PacketView } from './types';
 import { normalizePacketKind, PACKET_KIND_LABELS, PACKET_KINDS } from './trafficVisuals';
 import { TraceStore, type TraceRecord } from './traceStore';
 
+function companionName(packet: PacketView): string {
+  const endpoint = packet.mode === 'observer' ? packet.observer : packet.segments[0]?.from;
+  return endpoint?.role === 'companion' ? endpoint.label : '';
+}
+
 export class TraceInspector {
   private readonly store = new TraceStore();
   private paused = false;
@@ -72,7 +77,8 @@ export class TraceInspector {
     for (const row of rows) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'trace-row';
       const kind = normalizePacketKind(row.packet.payloadType);
-      const kindLabel = PACKET_KIND_LABELS[kind];
+      const companion = kind === 'Other' ? companionName(row.packet) : '';
+      const kindLabel = companion ? `${PACKET_KIND_LABELS[kind]} · Companion: ${companion}` : PACKET_KIND_LABELS[kind];
       const path = row.packet.mode === 'route' ? row.packet.segments.map(segment => `${segment.from.label} → ${segment.to.label}`).join(' · ') : 'Heard here; route unavailable';
       if (this.logMode) {
         button.classList.add('trace-log-row');

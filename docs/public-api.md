@@ -71,7 +71,7 @@ type RoutePacketEventV2 = {
 };
 ```
 
-Observer packet events contain one sanitized `{ id, label, lat, lng }` point instead of `segments`. No event contains message content, public keys, raw paths, packet hashes, credentials, or resolver details.
+Observer packet events contain one sanitized `{ id, label, role, lat, lng }` point instead of `segments`. The optional endpoint `role` is the same public node role used in `NodeV2`; it is included so trace readers can identify named companions. No event contains message content, public keys, raw paths, packet hashes, credentials, or resolver details.
 
 ## Compatibility
 

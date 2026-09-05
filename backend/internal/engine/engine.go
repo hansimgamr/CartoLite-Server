@@ -709,7 +709,7 @@ func publicNode(node *privateNode) NodeV2 {
 }
 
 func endpointFor(node *privateNode) EndpointV2 {
-	return EndpointV2{ID: nodePublicID(node), Label: node.Label, Lat: node.Lat, Lng: node.Lng}
+	return EndpointV2{ID: nodePublicID(node), Label: node.Label, Role: normalizeRole(node.Role), Lat: node.Lat, Lng: node.Lng}
 }
 
 func nodePublicID(node *privateNode) string { return opaqueID("n", node.Key) }

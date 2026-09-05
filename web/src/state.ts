@@ -217,7 +217,7 @@ export class LiveStore {
 }
 
 function endpoint(node: NodeV2): EndpointV2 {
-  return { id: node.id, label: node.label, lat: node.lat, lng: node.lng };
+  return { id: node.id, label: node.label, role: node.role, lat: node.lat, lng: node.lng };
 }
 
 function routeIntensity(packetCount: number): RouteV2['intensity'] {

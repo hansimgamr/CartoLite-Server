@@ -3,6 +3,7 @@ package engine
 type EndpointV2 struct {
 	ID    string  `json:"id"`
 	Label string  `json:"label"`
+	Role  string  `json:"role,omitempty"`
 	Lat   float64 `json:"lat"`
 	Lng   float64 `json:"lng"`
 }

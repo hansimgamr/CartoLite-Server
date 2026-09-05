@@ -5,6 +5,7 @@ export type NodeRole = 'repeater' | 'companion' | 'room_server' | 'sensor' | 'un
 export interface EndpointV2 {
   id: string;
   label: string;
+  role?: NodeRole;
   lat: number;
   lng: number;
 }
