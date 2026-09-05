@@ -44,6 +44,9 @@
             <span>Layers</span>
           </button>
           <div id="layers-panel" class="layers-panel glass">
+            <button id="area-button" class="control-button" type="button" aria-label="Traffic area preview" aria-expanded="false" aria-controls="area-panel">
+              <svg class="control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 4v16M4 8h16" /></svg><span>Area</span>
+            </button>
             <div id="find-control" class="find-control">
               <button id="find-button" class="control-button" type="button" aria-label="Find a node" aria-expanded="false" aria-controls="find-panel" title="Find a node">
                 <svg class="control-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -130,6 +133,28 @@
           </section>
         </div>
         <button id="reset-button" class="control-button icon-button" type="button" title="Reset map view" aria-label="Reset map view">⌂</button>
+      </section>
+      <section id="area-summary-bar" aria-label="Selected traffic area">
+        <span id="area-summary"></span><button id="area-clear" type="button" hidden>Clear area</button>
+      </section>
+      <section id="area-panel" aria-labelledby="area-title" hidden>
+        <h2 id="area-title">Traffic area <small>Boundary preview</small></h2>
+        <form id="area-form" novalidate>
+          <label for="area-mode">Area</label>
+          <select id="area-mode"><option value="all">All received traffic</option><option value="custom">Custom area</option></select>
+          <fieldset id="area-fields" hidden>
+            <legend>Rectangle coordinates</legend>
+            <label>West<input id="area-west" type="number" step="any" min="-180" max="180" inputmode="decimal" /></label>
+            <label>South<input id="area-south" type="number" step="any" min="-85.051129" max="85.051129" inputmode="decimal" /></label>
+            <label>East<input id="area-east" type="number" step="any" min="-180" max="180" inputmode="decimal" /></label>
+            <label>North<input id="area-north" type="number" step="any" min="-85.051129" max="85.051129" inputmode="decimal" /></label>
+            <p>Drag corners to resize or the centre to move. Panning does not change the rectangle.</p>
+          </fieldset>
+          <p id="area-error" role="alert"></p>
+          <div class="area-actions"><button type="submit">Apply</button><button id="area-cancel" type="button">Cancel</button><button id="area-fit" type="button">Fit area</button></div>
+          <p id="area-status" role="status"></p>
+          <a id="area-link" href="?area=all">Link to selected area</a>
+        </form>
       </section>
       <section id="legend" class="legend glass" aria-label="Map legend" data-collapsed="true" data-focused="false">
         <button id="legend-toggle" class="legend-toggle" type="button" aria-label="Show map legend" aria-controls="legend-items" aria-expanded="false">

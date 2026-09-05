@@ -1,6 +1,7 @@
 # Geographic traffic projection
 
-Status: R1 logic checkpoint. No area controls or live display filtering yet.
+Status: R2 boundary-preview checkpoint. Controls select and outline an area;
+traffic is explicitly **not filtered yet**. Live integration follows in R3.
 
 `web/src/trafficArea.ts` projects the existing sanitized schema v2 state and
 resolved packet views into a rectangular display area. It adds no dependency,
@@ -31,11 +32,63 @@ feed. This display filter is not an access-control boundary.
 ## Following checkpoints
 
 R2 adds validated area controls, preferences, an outline and deployment-specific
-preset configuration. R3 connects all map layers, search, focus, animation,
+preset configuration. These are now implemented. R3 connects all map layers, search, focus, animation,
 sound and activity indicators to the same projection. Switching scope must clear
 pending effects and remove old geometry; filtered upserts alone cannot do that.
 R4 performs end-to-end/recovery, privacy, performance and release checks before
-deployment. Until then these helpers do not change visible traffic.
+deployment. R2 does not change visible traffic.
+
+## Area controls (R2)
+
+Open **Area** in the control bar (under **Layers** on compact screens).
+Choose All received traffic, the optional operator preset, or Custom area.
+Custom editing provides four corner drag targets, a centre move target and
+labelled numeric coordinate fields. Touch targets are at least 44px. Apply
+validates and saves; Cancel or Escape discards the draft even with invalid or
+empty fields. Fit area frames the rectangle around the editor, and Clear area
+removes the selection. Moving the map never changes the applied rectangle.
+
+Selections are stored separately from viewport/layer preferences. A single
+explicit `?area=<preset-id>`, `?area=west,south,east,north` or `?area=all` takes
+precedence over storage. Repeated/invalid/unavailable values show an inline
+warning and select All; they never silently resurrect a previous area.
+Apply/Clear replace only the area query parameter, retaining unrelated parameters
+and node fragments. The selected-area link can be copied through the browser's
+normal link menu. If storage access or writes are blocked, selection still works
+for the visit and the URL remains shareable. No browser popup dialogs are used.
+
+The generic build contains no regional preset. Configure the public, non-secret
+`AREA_PRESET_ID`, `AREA_PRESET_LABEL`, and `AREA_PRESET_BOUNDS` settings in the
+operator's private environment and rebuild. Compose passes their `VITE_` build
+arguments. Invalid or incomplete configuration omits the preset; custom area
+selection still works. IDs must be lowercase URL slugs of at most 32 characters,
+excluding `all` and `custom`; labels must be nonempty and at most 60 characters.
+Bounds use the same validation as the home-view bounds but need not match them.
+
+`areaSelection.ts` handles validation/persistence and `areaControls.ts` handles
+the editor and MapLibre outline. R3 should consume the applied selection only,
+never an unsaved draft, and remove the explicit preview wording only after every
+traffic consumer uses the same scope.
+
+## R2 verification
+
+Run the isolated browser checks from `web/` with:
+
+```sh
+npx playwright test --config playwright.area.config.ts
+```
+
+The test server binds only to loopback. It uses a synthetic preset/state, a quiet
+mock event stream and empty intercepted tiles, not a broker, real geography or
+basemap credential. Checks cover desktop, phone, portrait tablet, phone landscape
+and small-phone layouts, mouse/touch dragging, keyboard entry, invalid-input
+cancellation, URL precedence, reload, Clear, target sizes, containment and blocked
+storage. Screenshots remain ignored test output. These are editor checks, not a
+claim of production tile, live SSE or geographic filtering verification.
+
+R2 checkpoint: 127 frontend tests and 15 browser checks passed; TypeScript and
+production build passed. Vite retains its bundle-size advisory. No Pi release
+or full backend/integration release suite was performed in this stage.
 
 ## R1 verification
 

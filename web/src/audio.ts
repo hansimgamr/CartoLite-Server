@@ -1,4 +1,5 @@
 import { routeDuration, segmentNearViewport, segmentTravelWeights } from './packetAnimator';
+import { browserStorage } from './preferences';
 import type { PacketView } from './types';
 import type { PacketKind } from './trafficVisuals';
 
@@ -29,9 +30,9 @@ interface WebKitAudioWindow extends Window {
   webkitAudioContext?: AudioContextConstructor;
 }
 
-export function loadSoundPreference(storage: Storage): SoundPreferenceV2 {
+export function loadSoundPreference(storage: Storage | undefined): SoundPreferenceV2 {
   try {
-    const value = JSON.parse(storage.getItem(SOUND_STORAGE_KEY) ?? 'null') as {
+    const value = JSON.parse(storage?.getItem(SOUND_STORAGE_KEY) ?? 'null') as {
       enabled?: unknown;
       volume?: unknown;
       scene?: unknown;
@@ -39,7 +40,7 @@ export function loadSoundPreference(storage: Storage): SoundPreferenceV2 {
     if (value && typeof value.enabled === 'boolean' && typeof value.volume === 'number' && isSoundScene(value.scene)) {
       return { enabled: value.enabled, volume: clamp(value.volume, 0, 1), scene: value.scene };
     }
-    const legacy = JSON.parse(storage.getItem(LEGACY_SOUND_STORAGE_KEY) ?? 'null') as {
+    const legacy = JSON.parse(storage?.getItem(LEGACY_SOUND_STORAGE_KEY) ?? 'null') as {
       enabled?: unknown;
       volume?: unknown;
     } | null;
@@ -54,9 +55,9 @@ export function loadSoundPreference(storage: Storage): SoundPreferenceV2 {
   return { enabled: false, volume: DEFAULT_SOUND_VOLUME, scene: DEFAULT_SOUND_SCENE };
 }
 
-export function saveSoundPreference(storage: Storage, preference: SoundPreferenceV2): void {
+export function saveSoundPreference(storage: Storage | undefined, preference: SoundPreferenceV2): void {
   try {
-    storage.setItem(SOUND_STORAGE_KEY, JSON.stringify({
+    storage?.setItem(SOUND_STORAGE_KEY, JSON.stringify({
       enabled: preference.enabled,
       volume: clamp(preference.volume, 0, 1),
       scene: isSoundScene(preference.scene) ? preference.scene : DEFAULT_SOUND_SCENE,
@@ -255,7 +256,7 @@ export class RouteSonifier {
   constructor(
     private readonly map: ViewportProjector,
     private readonly viewport: HTMLElement,
-    private readonly storage: Storage = window.localStorage,
+    private readonly storage: Storage | undefined = browserStorage(),
   ) {
     const preference = loadSoundPreference(storage);
     this.preferredEnabled = preference.enabled;

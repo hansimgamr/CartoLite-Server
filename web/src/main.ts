@@ -1,6 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './styles.css';
 import { fetchState, LiveFeed } from './api';
+import { setupAreaControls } from './areaControls';
 import { RouteSonifier, type SoundScene, type SoundStatus } from './audio';
 import {
   LIVE_FOLLOW_MIN_INTERVAL_MS,
@@ -12,6 +13,7 @@ import {
 import { PacketAnimator } from './packetAnimator';
 import {
   loadSavedView,
+  browserStorage,
   loadUiPreferences,
   saveUiPreferences,
   saveView,
@@ -66,7 +68,8 @@ const aboutDialog = required<HTMLDialogElement>('about-dialog');
 const aboutClose = required<HTMLButtonElement>('about-close');
 const lastUpdate = required<HTMLElement>('last-update');
 
-let uiPreferences: UiPreferences = loadUiPreferences(localStorage);
+const storage = browserStorage();
+let uiPreferences: UiPreferences = loadUiPreferences(storage);
 let legendExpanded = uiPreferences.legendExpanded;
 let lastTrafficPulseAt = -Infinity;
 let soundPulseTimer: number | undefined;
@@ -148,7 +151,7 @@ layersSummary.style.display = activeViewClass === 'desktop' ? 'none' : '';
 legendToggle.addEventListener('click', () => {
   legendExpanded = !legendExpanded;
   uiPreferences = { ...uiPreferences, legendExpanded };
-  saveUiPreferences(localStorage, uiPreferences);
+  saveUiPreferences(storage, uiPreferences);
   legend.dataset.collapsed = String(!legendExpanded);
   legendToggle.setAttribute('aria-expanded', String(legendExpanded));
   legendToggle.setAttribute('aria-label', legendExpanded ? 'Hide map legend' : 'Show map legend');
@@ -211,6 +214,7 @@ async function start(): Promise<void> {
   let store: LiveStore | undefined;
   let feed: LiveFeed | undefined;
   let followTimer: number | undefined;
+  let areaControls: ReturnType<typeof setupAreaControls> | undefined;
   try {
     // Construct MapLibre before the state request so the basemap can paint while
     // the initial snapshot is in flight.
@@ -230,6 +234,7 @@ async function start(): Promise<void> {
       },
     );
     mapView = liveMap;
+    areaControls = setupAreaControls(liveMap.map);
     const packetCanvas = required<HTMLCanvasElement>('packet-canvas');
     const liveAnimator = new PacketAnimator(liveMap.map, packetCanvas);
     animator = liveAnimator;
@@ -369,6 +374,7 @@ async function start(): Promise<void> {
       store?.destroy();
       animator?.destroy();
       sonifier?.destroy();
+      areaControls?.destroy();
       mapView?.destroy();
       releaseScreenAwake();
     }, { once: true });
@@ -435,7 +441,7 @@ async function start(): Promise<void> {
       if (changes) liveMap.render(state, changes);
       updateStatus();
     });
-    const savedView = loadSavedView(localStorage, activeViewClass);
+    const savedView = loadSavedView(storage, activeViewClass);
     if (savedView) {
       mapElement.dataset.viewSource = liveMap.restore(savedView.center, savedView.zoom, initial.nodes)
         ? 'saved'
@@ -444,6 +450,8 @@ async function start(): Promise<void> {
       mapElement.dataset.viewSource = 'home';
       liveMap.home(initial.nodes);
     }
+
+    areaControls.fit();
 
     // Deep link from the companion status console, which computes this id
     // itself from a node's public key. The id is validated against the shape
@@ -464,7 +472,7 @@ async function start(): Promise<void> {
     }
 
     liveMap.map.on('moveend', () => {
-      if (!liveFollow) saveView(localStorage, activeViewClass, liveMap.view());
+      if (!liveFollow) saveView(storage, activeViewClass, liveMap.view());
     });
     let resizeTimer: number | undefined;
     window.addEventListener('resize', () => {
@@ -477,7 +485,7 @@ async function start(): Promise<void> {
         setLayersOpen(next === 'desktop');
         layersSummary.hidden = next === 'desktop';
         layersSummary.style.display = next === 'desktop' ? 'none' : '';
-        const restored = loadSavedView(localStorage, next);
+        const restored = loadSavedView(storage, next);
         if (restored) {
           mapElement.dataset.viewSource = liveMap.restore(restored.center, restored.zoom, liveStore.snapshot.nodes)
             ? 'saved'
@@ -557,6 +565,7 @@ async function start(): Promise<void> {
     store?.destroy();
     animator?.destroy();
     sonifier?.destroy();
+    areaControls?.destroy();
     mapView?.destroy();
     statusElement.dataset.state = 'offline';
     statusText.textContent = 'Unavailable';
@@ -685,7 +694,7 @@ function required<T extends HTMLElement>(id: string): T {
 
 function persistUiPreference(update: Partial<UiPreferences>): void {
   uiPreferences = { ...uiPreferences, ...update };
-  saveUiPreferences(localStorage, uiPreferences);
+  saveUiPreferences(storage, uiPreferences);
 }
 
 function wireLayerToggle(

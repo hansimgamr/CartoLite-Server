@@ -1,3 +1,8 @@
+/** Accessing the storage property itself can throw in restricted browsers. */
+export function browserStorage(): Storage | undefined {
+  try { return window.localStorage; } catch { return undefined; }
+}
+
 export interface SavedView {
   center: [number, number];
   zoom: number;
@@ -43,9 +48,9 @@ export function viewStorageKey(kind: ViewClass): string {
   return `${VIEW_STORAGE_PREFIX}:${kind}`;
 }
 
-export function loadSavedView(storage: Storage, kind: ViewClass): SavedView | null {
+export function loadSavedView(storage: Storage | undefined, kind: ViewClass): SavedView | null {
   try {
-    const value = JSON.parse(storage.getItem(viewStorageKey(kind)) ?? 'null') as {
+    const value = JSON.parse(storage?.getItem(viewStorageKey(kind)) ?? 'null') as {
       center?: unknown;
       zoom?: unknown;
     } | null;
@@ -61,17 +66,17 @@ export function loadSavedView(storage: Storage, kind: ViewClass): SavedView | nu
   }
 }
 
-export function saveView(storage: Storage, kind: ViewClass, view: SavedView): void {
+export function saveView(storage: Storage | undefined, kind: ViewClass, view: SavedView): void {
   try {
-    storage.setItem(viewStorageKey(kind), JSON.stringify(view));
+    storage?.setItem(viewStorageKey(kind), JSON.stringify(view));
   } catch {
     // Local persistence is optional; private browsing may reject it.
   }
 }
 
-export function loadUiPreferences(storage: Storage): UiPreferences {
+export function loadUiPreferences(storage: Storage | undefined): UiPreferences {
   try {
-    const value = JSON.parse(storage.getItem(UI_STORAGE_KEY) ?? 'null') as Partial<UiPreferences> | null;
+    const value = JSON.parse(storage?.getItem(UI_STORAGE_KEY) ?? 'null') as Partial<UiPreferences> | null;
     if (!value) return { ...DEFAULT_UI_PREFERENCES };
     const routeWindow = isSavedRouteWindow(value.routeWindow) ? value.routeWindow : DEFAULT_UI_PREFERENCES.routeWindow;
     return {
@@ -90,9 +95,9 @@ export function loadUiPreferences(storage: Storage): UiPreferences {
   }
 }
 
-export function saveUiPreferences(storage: Storage, preferences: UiPreferences): void {
+export function saveUiPreferences(storage: Storage | undefined, preferences: UiPreferences): void {
   try {
-    storage.setItem(UI_STORAGE_KEY, JSON.stringify(preferences));
+    storage?.setItem(UI_STORAGE_KEY, JSON.stringify(preferences));
   } catch {
     // Local persistence is optional; private browsing may reject it.
   }

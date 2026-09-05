@@ -29,6 +29,12 @@ optional and default to upstream behaviour.
 - Add tested geographic state/packet projection helpers for planned area
   controls. This is a logic-only checkpoint; filtering is not yet connected to
   the UI or live display. See [traffic-area contract](docs/traffic-area.md).
+- Add Area boundary-preview controls with an optional deployment preset,
+  touch-draggable custom rectangle, coordinate fields, Apply/Cancel/Clear,
+  validated share links and optional browser persistence. Traffic filtering
+  remains deferred to R3 and is explicitly labelled as a preview.
+- Keep map, layer and sound startup usable when browser storage access itself
+  throws. Restore compact layer labels and keep menus above the area summary.
 
 ## 0.1.0 - 2026-09-02
 

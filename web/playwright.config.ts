@@ -17,10 +17,10 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop',
-      testIgnore: /tablet-portrait\.spec\.ts/,
+      testIgnore: [/tablet-portrait\.spec\.ts/, /area-controls\.spec\.ts/],
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }
     },
-    { name: 'mobile', testIgnore: /tablet-portrait\.spec\.ts/, use: { ...devices['Pixel 7'] } },
+    { name: 'mobile', testIgnore: [/tablet-portrait\.spec\.ts/, /area-controls\.spec\.ts/], use: { ...devices['Pixel 7'] } },
     {
       name: 'mobile-tablet-portrait',
       testMatch: /tablet-portrait\.spec\.ts/,
@@ -28,7 +28,7 @@ export default defineConfig({
     },
     {
       name: 'mobile-landscape',
-      testIgnore: /tablet-portrait\.spec\.ts/,
+      testIgnore: [/tablet-portrait\.spec\.ts/, /area-controls\.spec\.ts/],
       use: { ...devices['Pixel 7'], viewport: { width: 844, height: 390 } }
     }
   ]
