@@ -25,6 +25,7 @@
         <a id="console-link" class="console-link" href="#" aria-label="Open the mesh status console" title="Signal readings, verdicts and history" hidden>
           <span aria-hidden="true">◧</span><span>Readings</span>
         </a>
+        <a id="traces-link" class="console-link" href="?panel=traces" aria-label="Open live traces" title="Inspect recent live observations">↝ <span>Live Traces</span></a>
         <div id="status" class="status" data-state="loading" role="status">
           <span class="status-dot" aria-hidden="true"></span><span id="status-text">Starting…</span>
           <span id="traffic-meter" class="traffic-meter" data-level="0" aria-hidden="true">
@@ -173,6 +174,7 @@
       <section id="route-legend" class="route-legend glass" aria-label="Route colors show the latest packet type" hidden></section>
       <div id="tooltip" class="tooltip glass" role="tooltip" hidden></div>
       <section id="node-inspector-sheet" class="node-inspector-sheet glass" aria-label="Selected node details" hidden></section>
+      <section id="trace-inspector" class="trace-inspector glass" aria-label="Live trace observations" hidden></section>
       <div id="fatal" class="fatal glass" role="alert" hidden></div>
       <dialog id="about-dialog" class="about-dialog glass" aria-labelledby="about-title">
         <button id="about-close" class="about-close" type="button" aria-label="Close CartoLite information">×</button>

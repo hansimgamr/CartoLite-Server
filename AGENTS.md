@@ -9,7 +9,7 @@ CartoLite Server is one small, worldwide MeshCore traffic map: a Go MQTT/HTTP pr
 - Never expose public keys, observer keys, raw path hex, packet hashes, packet payloads, decoded message text, credentials, or resolver reasons.
 - Never infer ambiguous, non-forwarder, missing-coordinate, missing-RF, or distance-gated route hops.
 - Keep public API schema v2 synchronized between Go and TypeScript.
-- Do not add analytics, accounts, chat, packet history, SQLite, an Android app, country-specific data, or Labs.
+- Do not add analytics, accounts, chat, packet history, SQLite, an Android app, country-specific data, or Labs. The user's approved stage 5 exception adds only this bounded live trace inspector over the existing sanitized SSE feed; it does not add storage or raw packet access.
 - Use synthetic fixtures only. Never commit live broker data, `.env`, checkpoints, captures, or secret files.
 
 ## Delivery

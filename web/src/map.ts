@@ -762,6 +762,16 @@ export class LiveMap {
     this.clearNodeSelection();
   }
 
+  inspectRoute(routeID: string): boolean {
+    const route = this.routesByID.get(routeID);
+    if (!route) return false;
+    const node = this.nodesByID.get(route.fromId);
+    if (!node) return false;
+    this.setSelectedNode(node.id, node.label);
+    this.setHoveredRoute(route.id);
+    return true;
+  }
+
   setRoutesVisible(visible: boolean): void {
     const started = performance.now();
     this.routesVisible = visible;

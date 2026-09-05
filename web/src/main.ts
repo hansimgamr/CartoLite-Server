@@ -25,6 +25,7 @@ import { activityLabel, LiveStore, type MapChanges } from './state';
 import { projectPacketToArea, projectStateToArea, scopedMapChanges, type AreaBounds } from './trafficArea';
 import { normalizePacketKind, PACKET_KIND_COLORS, ROUTE_LEGEND_ITEMS } from './trafficVisuals';
 import type { NodeV2, PacketView, StateV2 } from './types';
+import { TraceInspector } from './traceInspector';
 
 const appElement = required<HTMLElement>('app');
 const statusElement = required<HTMLElement>('status');
@@ -69,6 +70,7 @@ const aboutDialog = required<HTMLDialogElement>('about-dialog');
 const aboutClose = required<HTMLButtonElement>('about-close');
 const lastUpdate = required<HTMLElement>('last-update');
 const areaActivity = required<HTMLElement>('area-activity');
+const traceRoot = required<HTMLElement>('trace-inspector');
 
 const storage = browserStorage();
 let uiPreferences: UiPreferences = loadUiPreferences(storage);
@@ -237,6 +239,14 @@ async function start(): Promise<void> {
       },
     );
     mapView = liveMap;
+    const traceInspector = new TraceInspector(traceRoot, (packet) => {
+      if (packet.mode === 'route') {
+        const routeID = packet.segments[0]?.routeId;
+        if (routeID) liveMap.inspectRoute(routeID);
+      } else {
+        liveMap.selectNodeByID(packet.observer.id, false);
+      }
+    });
     let activeArea: AreaBounds | null = null;
     let applyAreaChange: (() => void) | undefined;
     areaControls = setupAreaControls(liveMap.map, (bounds) => {
@@ -563,7 +573,9 @@ async function start(): Promise<void> {
       },
       onPacket(event) {
         // Always apply the full event first, including every excluded sequence.
-        const packet = projectPacketToArea(liveStore.applyPacket(event), activeArea);
+        const resolvedPacket = liveStore.applyPacket(event);
+        if (resolvedPacket) traceInspector.add(resolvedPacket);
+        const packet = projectPacketToArea(resolvedPacket, activeArea);
         lastUpdate.textContent = formatUpdate(event.at);
         if (!packet) return;
         matchedObservations += 1;
@@ -588,6 +600,7 @@ async function start(): Promise<void> {
         matchedObservations = 0;
         lastObservedAt = 0;
         liveStore.replace(snapshot);
+        traceInspector.reset();
         return snapshot;
       },
       onError(error) {
