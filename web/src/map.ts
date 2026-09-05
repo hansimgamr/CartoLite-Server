@@ -791,12 +791,23 @@ export class LiveMap {
   fitPacket(packet: PacketView): boolean {
     const endpoints = packetEndpoints(packet).filter(validEndpoint);
     if (endpoints.length === 0) return false;
-    if (endpoints.length === 1) { this.map.easeTo({center:[endpoints[0]!.lng,endpoints[0]!.lat],zoom:Math.max(this.map.getZoom(),10)}); return true; }
+    const container = this.map.getContainer();
+    const rect = container.getBoundingClientRect();
+    const mobile = document.documentElement.dataset.viewClass === 'mobile';
+    const padding = {top: mobile ? 120 : 100, right: 48, bottom: 100, left: 48};
+    const panels = document.querySelectorAll<HTMLElement>(mobile
+      ? '.map-observation-panels > *' : '#trace-inspector');
+    for (const panel of panels) {
+      if (!panel.getClientRects().length) continue;
+      const box = panel.getBoundingClientRect();
+      if (mobile) padding.bottom = Math.max(padding.bottom, Math.min(rect.bottom - box.top + 24, rect.height - padding.top - 80));
+      else padding.right = Math.max(padding.right, Math.min(rect.right - box.left + 32, rect.width - 160));
+    }
     const bounds = new maplibregl.LngLatBounds();
     for (const endpoint of endpoints) bounds.extend([endpoint.lng, endpoint.lat]);
     this.map.fitBounds(bounds, {
-      padding: this.map.getContainer().clientWidth <= 620 ? 48 : 120,
-      maxZoom: Math.max(this.map.getZoom(), 8),
+      padding,
+      maxZoom: Math.max(this.map.getZoom(), endpoints.length === 1 ? 10 : 8),
       duration: this.reducedMotion ? 0 : 500,
     });
     return true;

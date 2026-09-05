@@ -308,11 +308,11 @@ async function start(): Promise<void> {
         element.addEventListener('click', () => liveMap.selectNodeByID(node.id, false));
         knownPathMarkers.push(new Marker({element}).setLngLat([node.lng, node.lat]).addTo(liveMap.map));
       }
-      if (packet.partial) liveMap.fitPacket(packet);
       if (packet.mode === 'route') {
         const routeID = packet.segments[0]?.routeId;
         if (routeID) liveMap.inspectRoute(routeID);
       } else liveMap.selectNodeByID(packet.observer.id, false);
+      if (packet.partial) requestAnimationFrame(() => liveMap.fitPacket(packet));
     }, (packet) => { liveMap.fitPacket(packet); }, (packet) => {
       const replay = projectPacketToArea(packet, null);
       for (const run of replay?.runs || []) liveAnimator.add(run);
