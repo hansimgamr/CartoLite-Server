@@ -238,6 +238,7 @@ function wireStatusConsoleLink(): void {
 async function start(): Promise<void> {
   wireStatusConsoleLink();
   let plannedMarkers: Marker[] = [];
+  let plannedRefreshTimer: number | undefined;
   let mapView: LiveMap | undefined;
   let animator: PacketAnimator | undefined;
   let sonifier: RouteSonifier | undefined;
@@ -448,6 +449,9 @@ async function start(): Promise<void> {
       fetchPlannedDeployments().catch(() => [])
     ]);
     renderPlannedDeployments(liveMap.map, plannedDeployments, plannedMarkers);
+    plannedRefreshTimer = window.setInterval(() => {
+      void fetchPlannedDeployments().then((plans) => renderPlannedDeployments(liveMap.map, plans, plannedMarkers)).catch(() => undefined);
+    }, 60_000);
     const liveStore = new LiveStore(initial);
     store = liveStore;
     let streamConnected = false;
@@ -697,6 +701,7 @@ async function start(): Promise<void> {
     sonifier?.destroy();
     areaControls?.destroy();
     mapView?.destroy();
+    if (plannedRefreshTimer !== undefined) window.clearInterval(plannedRefreshTimer);
     plannedMarkers.splice(0).forEach((marker) => marker.remove());
     statusElement.dataset.state = 'offline';
     statusText.textContent = 'Unavailable';
