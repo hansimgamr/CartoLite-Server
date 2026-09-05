@@ -113,7 +113,13 @@ export class TraceInspector {
       if (times.length) {
         const history = document.createElement('div'); history.className = 'trace-history-log';
         const heading = document.createElement('strong'); heading.textContent = 'Historical segment observations'; history.append(heading);
-        times.forEach((timestamp) => { const entry = document.createElement('time'); entry.dateTime = new Date(timestamp).toISOString(); entry.textContent = new Date(timestamp).toLocaleString(); history.append(entry); });
+        const note = document.createElement('span'); note.className = 'trace-history-note'; note.textContent = 'Each timestamp marks when CartoLite observed a packet on this route segment.'; history.append(note);
+        times.forEach((timestamp) => {
+          const row = document.createElement('div'); row.className = 'trace-history-row';
+          const event = document.createElement('span'); event.className = 'trace-history-event'; event.textContent = 'Packet observed';
+          const entry = document.createElement('time'); entry.dateTime = new Date(timestamp).toISOString(); entry.textContent = new Date(timestamp).toLocaleString();
+          row.append(event, entry); history.append(row);
+        });
         this.detail.append(history);
       }
     } catch { this.detail.textContent = 'Historical route activity is temporarily unavailable.'; }
