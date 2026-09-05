@@ -20,6 +20,8 @@ import {
 } from './nodeInspector';
 import { HistoricalRouteLayer, ROUTE_WEBGL_LAYER_ID } from './routeLayer';
 import { isRecentNeighborRoute, recentNeighborRoutes } from './routeFocus';
+import { parseAreaBounds as parseHomeBounds } from './trafficArea';
+export { parseHomeBounds };
 import type { MapChanges } from './state';
 import {
   decayedRouteTraffic,
@@ -43,15 +45,6 @@ export const DEFAULT_ZOOM = 1.4;
 // on a desktop and on a phone. Unset upstream, where the world fit is right.
 export const HOME_BOUNDS = parseHomeBounds(import.meta.env.VITE_HOME_BOUNDS);
 
-export function parseHomeBounds(raw: unknown): [[number, number], [number, number]] | null {
-  if (typeof raw !== 'string') return null;
-  const parts = raw.split(',').map((value) => Number(value.trim()));
-  if (parts.length !== 4 || parts.some((value) => !Number.isFinite(value))) return null;
-  const [west, south, east, north] = parts as [number, number, number, number];
-  if (west < -180 || east > 180 || west >= east) return null;
-  if (south < -85.051129 || north > 85.051129 || south >= north) return null;
-  return [[west, south], [east, north]];
-}
 export const DETAIL_ZOOM = 8.4;
 export const LIVE_FOLLOW_SAFE_RATIO = 0.6;
 export const LIVE_FOLLOW_MIN_INTERVAL_MS = 5_000;

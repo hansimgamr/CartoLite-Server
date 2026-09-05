@@ -26,6 +26,9 @@ optional and default to upstream behaviour.
   region's scale, cover the individual nodes and routes a reader came for. A
   stored per-visitor choice still wins.
 - Title the browser tab `CartoQuinte`.
+- Add tested geographic state/packet projection helpers for planned area
+  controls. This is a logic-only checkpoint; filtering is not yet connected to
+  the UI or live display. See [traffic-area contract](docs/traffic-area.md).
 
 ## 0.1.0 - 2026-09-02
 
