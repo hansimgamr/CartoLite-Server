@@ -48,21 +48,52 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.HandleFunc("GET /api/state", s.state)
 	mux.HandleFunc("GET /api/route-history", s.routeHistory)
+	mux.HandleFunc("GET /api/packet-history", s.packetHistory)
 	mux.HandleFunc("GET /api/events", s.events)
 	mux.HandleFunc("/", s.frontend)
 	return securityHeaders(mux)
 }
 
+func (s *Server) packetHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"schemaVersion": 2, "retentionDays": engine.PacketHistoryDays, "limit": engine.PacketHistoryLimit, "packets": s.engine.PacketHistory()})
+}
+
 func (s *Server) routeHistory(w http.ResponseWriter, r *http.Request) {
 	ids := strings.Split(strings.TrimSpace(r.URL.Query().Get("routes")), ",")
-	if len(ids) == 0 || len(ids) > 25 { http.Error(w, "routes must contain 1-25 route ids", http.StatusBadRequest); return }
+	if len(ids) == 0 || len(ids) > 25 {
+		http.Error(w, "routes must contain 1-25 route ids", http.StatusBadRequest)
+		return
+	}
 	from := time.Now().Add(-7 * 24 * time.Hour).UnixMilli()
-	if value := strings.TrimSpace(r.URL.Query().Get("from")); value != "" { parsed, err := strconv.ParseInt(value, 10, 64); if err != nil { http.Error(w, "invalid from", http.StatusBadRequest); return }; from = parsed }
+	if value := strings.TrimSpace(r.URL.Query().Get("from")); value != "" {
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			http.Error(w, "invalid from", http.StatusBadRequest)
+			return
+		}
+		from = parsed
+	}
 	to := time.Now().UnixMilli()
 	var all map[string][]int64
-	if err := json.Unmarshal(s.engine.RouteHistoryJSON(), &all); err != nil { http.Error(w, "history unavailable", http.StatusServiceUnavailable); return }
+	if err := json.Unmarshal(s.engine.RouteHistoryJSON(), &all); err != nil {
+		http.Error(w, "history unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	result := make(map[string][]int64, len(ids))
-	for _, id := range ids { id = strings.TrimSpace(id); if id == "" || len(id) > 128 { http.Error(w, "invalid route id", http.StatusBadRequest); return }; samples := all[id]; for _, at := range samples { if at >= from && at <= to { result[id] = append(result[id], at) } } }
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" || len(id) > 128 {
+			http.Error(w, "invalid route id", http.StatusBadRequest)
+			return
+		}
+		samples := all[id]
+		for _, at := range samples {
+			if at >= from && at <= to {
+				result[id] = append(result[id], at)
+			}
+		}
+	}
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, map[string]any{"schemaVersion": 1, "from": from, "to": to, "partial": true, "routes": result})
 }

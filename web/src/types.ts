@@ -62,6 +62,8 @@ interface PacketBaseV2 {
   id: string;
   at: number;
   payloadType: PacketKind;
+  rssi?: number;
+  snr?: number;
 }
 
 export interface RoutePacketEventV2 extends PacketBaseV2 {

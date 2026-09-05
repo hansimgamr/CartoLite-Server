@@ -9,3 +9,8 @@ The browser stores only separate desktop/mobile views, map layer and route-windo
 Enabling Topography or 3D causes normal attributed elevation-tile requests to Mapterhorn. The CARTO vector basemap makes normal browser requests using the operator's browser-visible project key. Neither request includes MeshCore traffic data.
 
 The atomic server checkpoint contains current topology and private resolver keys needed for restart. Treat it as private operational data: back it up encrypted, never publish it, and never attach a live copy to an issue.
+
+
+## Saved observation history (September 2026)
+
+The operator-approved saved packet/radio history extends the earlier live-only design. See [Live Traces](live-traces.md) for the bounded seven-day / 10,000-observation archive, public `/api/packet-history` schema, optional RSSI/SNR and checkpoint durability. Only sanitized public observation metadata is retained; no message payloads or keys are added.

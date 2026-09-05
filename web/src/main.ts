@@ -619,6 +619,7 @@ async function start(): Promise<void> {
     const liveFeed = new LiveFeed(initial, {
       onConnection(connected) {
         streamConnected = connected;
+        traceInspector.setConnection(connected && liveStore.snapshot.status.feed === 'connected');
         updateStatus();
       },
       onNode(event) {
@@ -647,13 +648,14 @@ async function start(): Promise<void> {
       },
       onStatus(event) {
         liveStore.updateStatus(event.status, event.seq);
+        traceInspector.setConnection(streamConnected && event.status.feed === 'connected');
       },
       async recover() {
         const snapshot = await fetchState();
         matchedObservations = 0;
         lastObservedAt = 0;
         liveStore.replace(snapshot);
-        traceInspector.reset();
+        await traceInspector.restore();
         return snapshot;
       },
       onError(error) {

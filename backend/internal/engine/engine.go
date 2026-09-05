@@ -78,13 +78,14 @@ type Engine struct {
 	done                 chan struct{}
 	publish              func(Event)
 
-	nodes      map[string]*privateNode
-	nodeIDs    map[string]*privateNode
-	prefixes   map[string]map[string]struct{}
-	routes     map[string]*privateRoute
-	feed       bool
-	lastPacket int64
+	nodes       map[string]*privateNode
+	nodeIDs     map[string]*privateNode
+	prefixes    map[string]map[string]struct{}
+	routes      map[string]*privateRoute
+	feed        bool
+	lastPacket  int64
 	historyJSON atomic.Value
+	packets     packetHistory
 }
 
 func New(options Options) (*Engine, error) {
@@ -94,7 +95,7 @@ func New(options Options) (*Engine, error) {
 	if options.Logger == nil {
 		options.Logger = slog.Default()
 	}
-	nodes, routes, err := loadCheckpoint(options.Checkpoint)
+	nodes, routes, packets, err := loadCheckpoint(options.Checkpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +120,8 @@ func New(options Options) (*Engine, error) {
 		prefixes:   make(map[string]map[string]struct{}),
 		routes:     routes,
 	}
+	e.packets.rows = packets
+	e.packets.prune(time.Now().UnixMilli())
 	e.checkpointOK.Store(true)
 	e.lastCheckpointNodes.Store(int64(len(e.nodes)))
 	e.lastCheckpointRoutes.Store(int64(len(e.routes)))
@@ -275,12 +278,12 @@ func (e *Engine) process(message mqtt.Message) bool {
 	payloadKind := meshcore.PayloadName(packet.PayloadType)
 	segments, routed := e.resolveAndRecord(message, packet, source, observer, payloadKind)
 	if routed {
-		e.emitPacket(message.HeardAt, payloadKind, segments, nil)
+		e.emitPacket(message.HeardAt, payloadKind, segments, nil, message.RSSI, message.SNR)
 	} else if observer != nil && observer.HasCoords {
 		endpoint := endpointFor(observer)
-		e.emitPacket(message.HeardAt, payloadKind, nil, &endpoint)
+		e.emitPacket(message.HeardAt, payloadKind, nil, &endpoint, message.RSSI, message.SNR)
 	}
-	return changed || observerChanged || routed
+	return changed || observerChanged || routed || (observer != nil && observer.HasCoords)
 }
 
 func (e *Engine) observePublisher(message mqtt.Message) (*privateNode, bool) {
@@ -397,8 +400,12 @@ func (e *Engine) resolveAndRecord(message mqtt.Message, packet meshcore.Packet, 
 		updateRouteActivity(route, message.HeardAt, payloadKind)
 		route.History = append(route.History, message.HeardAt)
 		cutoff := message.HeardAt - (7 * 24 * time.Hour).Milliseconds()
-		if len(route.History) > 200 { route.History = route.History[len(route.History)-200:] }
-		for len(route.History) > 0 && route.History[0] < cutoff { route.History = route.History[1:] }
+		if len(route.History) > 200 {
+			route.History = route.History[len(route.History)-200:]
+		}
+		for len(route.History) > 0 && route.History[0] < cutoff {
+			route.History = route.History[1:]
+		}
 	}
 	e.evictRoutes()
 	return segments, len(segments) > 0
@@ -464,13 +471,27 @@ func shouldPublishFreshness(node *privateNode, at int64) bool {
 	return at > node.LastPublished && (node.LastPublished == 0 || at-node.LastPublished >= nodeFreshnessEventEvery.Milliseconds())
 }
 
-func (e *Engine) emitPacket(at int64, payloadType string, segments []RouteSegmentV2, observer *EndpointV2) {
+func (e *Engine) emitPacket(at int64, payloadType string, segments []RouteSegmentV2, observer *EndpointV2, radio ...*float64) {
 	seq := e.seq.Add(1)
 	mode := "route"
 	if observer != nil {
 		mode = "observer"
 	}
 	event := PacketEventV2{Seq: seq, ID: opaqueID("p", e.bootID+"|"+strconv.FormatUint(seq, 10)), At: at, PayloadType: payloadType, Mode: mode, Segments: segments, Observer: observer}
+	if len(radio) == 2 {
+		event.RSSI = safeRadio(radio[0], -200, 0)
+		event.SNR = safeRadio(radio[1], -100, 100)
+	}
+	view := PacketViewV2{PacketEventV2: event}
+	view.PayloadType = normalizeRouteKind(event.PayloadType)
+	for _, segment := range segments {
+		from, to := e.nodeIDs[segment.FromID], e.nodeIDs[segment.ToID]
+		if from == nil || to == nil {
+			return
+		}
+		view.Segments = append(view.Segments, HistorySegmentV2{RouteID: segment.RouteID, From: endpointFor(from), To: endpointFor(to)})
+	}
+	e.packets.add(view)
 	e.emit(Event{Name: "packet", Seq: seq, Data: event})
 }
 
@@ -529,12 +550,20 @@ func (e *Engine) updateSnapshot(now time.Time) {
 	e.publicRoutes.Store(int64(len(state.Routes)))
 	e.snapshot.Store(body)
 	history := make(map[string][]int64, len(e.routes))
-	for id, route := range e.routes { if len(route.History) > 0 { history[id] = append([]int64(nil), route.History...) } }
-	if encoded, err := json.Marshal(history); err == nil { e.historyJSON.Store(encoded) }
+	for id, route := range e.routes {
+		if len(route.History) > 0 {
+			history[id] = append([]int64(nil), route.History...)
+		}
+	}
+	if encoded, err := json.Marshal(history); err == nil {
+		e.historyJSON.Store(encoded)
+	}
 }
 
 func (e *Engine) RouteHistoryJSON() []byte {
-	if value := e.historyJSON.Load(); value != nil { return value.([]byte) }
+	if value := e.historyJSON.Load(); value != nil {
+		return value.([]byte)
+	}
 	return []byte("{}")
 }
 
@@ -553,7 +582,7 @@ func (e *Engine) flushCheckpoint(now time.Time) (bool, bool) {
 	prunedRoutes, prunedNodes := e.pruneDurableState(now.UnixMilli())
 	pruned := prunedRoutes > 0 || prunedNodes > 0
 	started := time.Now()
-	if err := writeCheckpoint(e.checkpoint, e.nodes, e.routes); err != nil {
+	if err := writeCheckpoint(e.checkpoint, e.nodes, e.routes, e.PacketHistory()...); err != nil {
 		e.checkpointOK.Store(false)
 		e.log.Error("checkpoint write failed", "error", err)
 		return pruned, false

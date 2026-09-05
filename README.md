@@ -145,3 +145,7 @@ This repository contains the standalone server and browser map. It has no countr
 ## License
 
 [MIT](LICENSE). CartoLite Server is derived from the CartoLite map system and keeps its privacy-first public-data boundary.
+
+## Saved packet and radio log
+
+The map now restores the latest 10,000 sanitized observations (up to seven days) across visits, including optional receiver RSSI/SNR. Collection continues on the server while you are away. The separate Latest packet card stays current even while the saved Log is paused. See [Live Traces](docs/live-traces.md) for retention, checkpoint durability, CSV export and mobile behaviour.

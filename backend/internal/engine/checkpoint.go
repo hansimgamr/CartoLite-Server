@@ -14,39 +14,40 @@ type checkpointV1 struct {
 	SchemaVersion int             `json:"schemaVersion"`
 	Nodes         []*privateNode  `json:"nodes"`
 	Routes        []*privateRoute `json:"routes"`
+	Packets       []PacketViewV2  `json:"packets,omitempty"`
 }
 
-func loadCheckpoint(path string) (map[string]*privateNode, map[string]*privateRoute, error) {
+func loadCheckpoint(path string) (map[string]*privateNode, map[string]*privateRoute, []PacketViewV2, error) {
 	nodes := make(map[string]*privateNode)
 	routes := make(map[string]*privateRoute)
 	body, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		return nodes, routes, nil
+		return nodes, routes, nil, nil
 	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("read checkpoint: %w", err)
+		return nil, nil, nil, fmt.Errorf("read checkpoint: %w", err)
 	}
 	var saved checkpointV1
 	if err := json.Unmarshal(body, &saved); err != nil {
-		return nil, nil, fmt.Errorf("decode checkpoint (move the corrupt file aside to recover): %w", err)
+		return nil, nil, nil, fmt.Errorf("decode checkpoint (move the corrupt file aside to recover): %w", err)
 	}
 	if saved.SchemaVersion != 1 {
-		return nil, nil, fmt.Errorf("unsupported checkpoint schema %d (move the file aside to recover)", saved.SchemaVersion)
+		return nil, nil, nil, fmt.Errorf("unsupported checkpoint schema %d (move the file aside to recover)", saved.SchemaVersion)
 	}
 	for _, node := range saved.Nodes {
 		if node == nil || node.Region == "" || node.Key == "" {
-			return nil, nil, fmt.Errorf("checkpoint contains an invalid node")
+			return nil, nil, nil, fmt.Errorf("checkpoint contains an invalid node")
 		}
 		decodedKey, keyErr := hex.DecodeString(node.Key)
 		if keyErr != nil || len(decodedKey) < 4 || len(decodedKey) > 64 || node.Key != strings.ToUpper(node.Key) || !validCheckpointRegion(node.Region) || normalizeRole(node.Role) != node.Role || sanitizeLabel(node.Label, node.Role, node.Observer) != node.Label {
-			return nil, nil, fmt.Errorf("checkpoint contains unsafe node data")
+			return nil, nil, nil, fmt.Errorf("checkpoint contains unsafe node data")
 		}
 		if node.HasCoords && !validCoords(node.Lat, node.Lng) {
-			return nil, nil, fmt.Errorf("checkpoint contains invalid coordinates")
+			return nil, nil, nil, fmt.Errorf("checkpoint contains invalid coordinates")
 		}
 		key := nodeMapKey(node.Region, node.Key)
 		if nodes[key] != nil {
-			return nil, nil, fmt.Errorf("checkpoint contains a duplicate node")
+			return nil, nil, nil, fmt.Errorf("checkpoint contains a duplicate node")
 		}
 		nodes[key] = node
 	}
@@ -56,27 +57,34 @@ func loadCheckpoint(path string) (map[string]*privateNode, map[string]*privateRo
 	}
 	for _, route := range saved.Routes {
 		if route == nil || route.ID == "" || route.FromID == "" || route.ToID == "" || route.PacketCount < 1 {
-			return nil, nil, fmt.Errorf("checkpoint contains an invalid route")
+			return nil, nil, nil, fmt.Errorf("checkpoint contains an invalid route")
 		}
 		if (route.LastKind != "" && !validRouteKind(route.LastKind)) || math.IsNaN(route.Traffic) || math.IsInf(route.Traffic, 0) || route.Traffic < 0 || route.Traffic > maxRouteTraffic {
-			return nil, nil, fmt.Errorf("checkpoint contains unsafe route activity")
+			return nil, nil, nil, fmt.Errorf("checkpoint contains unsafe route activity")
 		}
 		if _, ok := allowedNodeIDs[route.FromID]; !ok {
-			return nil, nil, fmt.Errorf("checkpoint route references a missing endpoint")
+			return nil, nil, nil, fmt.Errorf("checkpoint route references a missing endpoint")
 		}
 		if _, ok := allowedNodeIDs[route.ToID]; !ok || route.ID != routePublicID(route.FromID, route.ToID) || routes[route.ID] != nil {
-			return nil, nil, fmt.Errorf("checkpoint contains an unsafe route")
+			return nil, nil, nil, fmt.Errorf("checkpoint contains an unsafe route")
 		}
 		if route.LastKind == "" {
 			route.LastKind = "Other"
 		}
-		if len(route.History) > 200 { route.History = route.History[len(route.History)-200:] }
+		if len(route.History) > 200 {
+			route.History = route.History[len(route.History)-200:]
+		}
 		if route.Traffic == 0 {
 			route.Traffic = 1
 		}
 		routes[route.ID] = route
 	}
-	return nodes, routes, nil
+	for _, packet := range saved.Packets {
+		if !validHistoryPacket(packet) {
+			return nil, nil, nil, fmt.Errorf("checkpoint contains unsafe packet history")
+		}
+	}
+	return nodes, routes, saved.Packets, nil
 }
 
 func preflightCheckpoint(path string) error {
@@ -140,8 +148,8 @@ func validCheckpointRegion(value string) bool {
 	return true
 }
 
-func writeCheckpoint(path string, nodes map[string]*privateNode, routes map[string]*privateRoute) error {
-	saved := checkpointV1{SchemaVersion: 1, Nodes: make([]*privateNode, 0, len(nodes)), Routes: make([]*privateRoute, 0, len(routes))}
+func writeCheckpoint(path string, nodes map[string]*privateNode, routes map[string]*privateRoute, packets ...PacketViewV2) error {
+	saved := checkpointV1{Packets: packets, SchemaVersion: 1, Nodes: make([]*privateNode, 0, len(nodes)), Routes: make([]*privateRoute, 0, len(routes))}
 	for _, node := range nodes {
 		copy := *node
 		saved.Nodes = append(saved.Nodes, &copy)

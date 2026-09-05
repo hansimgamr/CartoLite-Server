@@ -22,3 +22,8 @@ The checkpoint contains current topology and private resolver material needed af
 The browser treats `/api/state` as authoritative and `/api/events` as a bounded low-latency delta stream. Boot changes, sequence gaps, expired replay cursors, visibility resume, and network restoration trigger one coalesced state refresh and stream replacement.
 
 MapLibre owns stable geography, nodes, heat, and route geometry. The historical route texture covers the complete Web Mercator world at overview zooms; detail zooms use the same exact straight route segments in a compact WebGL line buffer. Canvas owns only transient packet cores, wakes, sparks, handoffs, and 45-second residue. The browser keeps map and sound settings locally.
+
+
+## Saved observation history (September 2026)
+
+The operator-approved saved packet/radio history extends the earlier live-only design. See [Live Traces](live-traces.md) for the bounded seven-day / 10,000-observation archive, public `/api/packet-history` schema, optional RSSI/SNR and checkpoint durability. Only sanitized public observation metadata is retained; no message payloads or keys are added.

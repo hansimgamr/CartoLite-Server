@@ -68,6 +68,8 @@ type PacketEventV2 struct {
 	Mode        string           `json:"mode"`
 	Segments    []RouteSegmentV2 `json:"segments,omitempty"`
 	Observer    *EndpointV2      `json:"observer,omitempty"`
+	RSSI        *float64         `json:"rssi,omitempty"`
+	SNR         *float64         `json:"snr,omitempty"`
 }
 
 type NodeEventV2 struct {

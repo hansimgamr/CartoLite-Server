@@ -58,3 +58,9 @@ optional and default to upstream behaviour.
 - Remove the Android project, app links, signing material, download links, and mobile release documentation.
 - Add a source-build Docker Compose flow using each operator's own CARTO key as a BuildKit secret.
 - Preserve public API schema v2, MQTT/SSE recovery, route and packet visuals, musical traffic, node inspection, privacy assertions, checkpoint safety, and hardened runtime defaults.
+
+## 2026-09-05 - Saved observations and latest packet
+
+- Retain sanitized packet observations and available RSSI/SNR across visits, reconnects and graceful restarts, capped at seven days / 10,000 events.
+- Add always-visible Latest packet card independent of paused/filtered log, paged saved log and CSV radio fields.
+- Replace mobile overlay offsets with a shared layout so node details, traces and the packet card remain accessible.

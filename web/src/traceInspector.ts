@@ -1,7 +1,14 @@
 import type { PacketKind } from './trafficVisuals';
 import type { PacketView } from './types';
-import { normalizePacketKind, PACKET_KIND_LABELS, PACKET_KINDS } from './trafficVisuals';
+import { normalizePacketKind, PACKET_KIND_LABELS, PACKET_KINDS, PACKET_KIND_COLORS } from './trafficVisuals';
 import { TraceStore, type TraceRecord } from './traceStore';
+
+function radioLabel(packet: PacketView): string {
+  const parts = [];
+  if (packet.rssi !== undefined) parts.push(`RSSI ${packet.rssi} dBm`);
+  if (packet.snr !== undefined) parts.push(`SNR ${packet.snr} dB`);
+  return parts.join(' · ') || 'Radio readings not supplied';
+}
 
 function companionName(packet: PacketView): string {
   const endpoint = packet.mode === 'observer' ? packet.observer : packet.segments[0]?.from;
@@ -21,7 +28,15 @@ export class TraceInspector {
   private readonly detail = document.createElement('div');
   private readonly liveView = document.createElement('button');
   private readonly logView = document.createElement('button');
-  private logMode = false;
+  private logMode = true;
+  private visibleRows = 200;
+  private readonly historyState = document.createElement('p');
+  private readonly more = document.createElement('button');
+  private readonly ticker = document.getElementById('packet-ticker')!;
+  private connected = false;
+  private latest?: PacketView;
+  private historyLoading?: Promise<void>;
+
 
   constructor(root: HTMLElement, private readonly onSelect: (packet: PacketView) => void, private readonly onFit: (packet: PacketView) => void, private readonly onReplay: (packet: PacketView) => void) {
     root.hidden = new URLSearchParams(location.search).get('panel') !== 'traces';
@@ -33,20 +48,67 @@ export class TraceInspector {
     this.pause.type = 'button'; this.pause.textContent = 'Pause list'; this.pause.addEventListener('click', () => { this.paused = !this.paused; this.pause.textContent = this.paused ? 'Resume list' : 'Pause list'; this.render(); });
     this.exportButton.type = 'button'; this.exportButton.textContent = 'Download CSV'; this.exportButton.addEventListener('click', () => this.exportCSV());
     this.kind.addEventListener('change', () => this.render());
-    this.liveView.type = 'button'; this.liveView.textContent = 'Live'; this.liveView.setAttribute('aria-pressed', 'true'); this.liveView.addEventListener('click', () => this.setView(false));
-    this.logView.type = 'button'; this.logView.textContent = 'Log'; this.logView.setAttribute('aria-pressed', 'false'); this.logView.addEventListener('click', () => this.setView(true));
+    this.liveView.type = 'button'; this.liveView.textContent = 'Live'; this.liveView.setAttribute('aria-pressed', 'false'); this.liveView.addEventListener('click', () => this.setView(false));
+    this.logView.type = 'button'; this.logView.textContent = 'Log'; this.logView.setAttribute('aria-pressed', 'true'); this.logView.addEventListener('click', () => this.setView(true));
     const viewToggle = document.createElement('div'); viewToggle.className = 'trace-view-toggle'; viewToggle.setAttribute('aria-label', 'Trace display'); viewToggle.append(this.liveView, this.logView);
     const controls = document.createElement('div'); controls.className = 'trace-controls'; controls.append(viewToggle, this.pause, this.kind, this.exportButton);
     this.status.className = 'trace-status'; this.list.className = 'trace-list';
     this.detail.className = 'trace-status trace-detail'; root.append(title, controls, this.status, this.detail, this.list);
+    this.historyState.className = 'trace-status';
+    this.more.type = 'button'; this.more.textContent = 'Show older observations'; this.more.className = 'trace-more';
+    this.more.addEventListener('click', () => { this.visibleRows += 200; this.render(); });
+    root.append(this.more, this.historyState);
+    window.setInterval(() => this.renderTicker(), 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) void this.restore(); });
+    this.renderTicker();
     this.render();
+    void this.restore();
   }
 
-  add(packet: PacketView): void { this.store.add(packet); if (this.paused) { this.pending += 1; this.status.textContent = `${this.pending} new observation${this.pending === 1 ? '' : 's'} · list paused`; } else this.render(); }
-  reset(): void { this.store.clear(); this.selected = undefined; this.pending = 0; this.render(); }
+  add(packet: PacketView): void { this.store.add(packet); if (!this.latest || packet.at >= this.latest.at) this.latest = packet; this.renderTicker(); if (this.paused) { this.pending += 1; this.status.textContent = `${this.pending} new observation${this.pending === 1 ? '' : 's'} · list paused`; } else this.render(); }
+  setConnection(connected: boolean): void { this.connected = connected; this.renderTicker(); }
+
+  restore(): Promise<void> {
+    if (this.historyLoading) return this.historyLoading;
+    this.historyState.textContent = 'Loading saved observations…';
+    this.historyLoading = (async () => {
+      try {
+        const response = await fetch('/api/packet-history', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error('History unavailable');
+        const body = await response.json();
+        if (body.schemaVersion !== 2 || !Array.isArray(body.packets)) throw new Error('Invalid history');
+        this.store.merge(body.packets);
+        this.latest = this.store.all().at(-1)?.packet ?? this.latest;
+        this.historyState.textContent = 'Saved on the server · up to 7 days / 10,000 observations · includes traffic while you were away';
+        if (!this.paused) this.render();
+        this.renderTicker();
+      } catch {
+        this.historyState.textContent = 'Saved history unavailable — current observations are still kept. Retry by returning to this page.';
+      } finally { this.historyLoading = undefined; }
+    })();
+    return this.historyLoading;
+  }
+
+  private renderTicker(): void {
+    const packet = this.latest;
+    const heading = document.createElement('strong'); heading.textContent = this.connected ? '● Latest packet · connected' : '○ Latest packet · reconnecting';
+    const event = document.createElement('span');
+    const signal = document.createElement('small');
+    if (packet) {
+      const kind = normalizePacketKind(packet.payloadType);
+      this.ticker.style.setProperty('--packet-color', PACKET_KIND_COLORS[kind]);
+      const age = Math.max(0, Math.floor((Date.now() - packet.at) / 1000));
+      const ago = age < 60 ? `${age}s ago` : age < 3600 ? `${Math.floor(age / 60)}m ago` : `${Math.floor(age / 3600)}h ago`;
+      const path = packet.mode === 'route' ? `${packet.segments[0]?.from.label} → ${packet.segments.at(-1)?.to.label}` : `${packet.observer.label} · heard here`;
+      event.textContent = `${PACKET_KIND_LABELS[kind]} · ${path}`;
+      signal.textContent = `Observed ${ago} · ${radioLabel(packet)}`;
+      signal.title = new Date(packet.at).toLocaleString();
+    } else { event.textContent = 'Waiting for an observation'; signal.textContent = 'The log continues collecting while you are away.'; }
+    this.ticker.replaceChildren(heading, event, signal);
+  }
 
   private setView(log: boolean): void {
-    this.logMode = log;
+    this.logMode = log; this.visibleRows = 200;
     this.liveView.setAttribute('aria-pressed', String(!log));
     this.logView.setAttribute('aria-pressed', String(log));
     this.render();
@@ -55,10 +117,10 @@ export class TraceInspector {
   private exportCSV(): void {
     const filter = this.kind.value as PacketKind;
     const rows = this.store.all().filter(row => !filter || normalizePacketKind(row.packet.payloadType) === filter);
-    const csv = ['time,kind,mode,segments,route', ...rows.map(row => {
+    const csv = ['time,kind,mode,segments,route,rssi_dbm,snr_db', ...rows.map(row => {
       const packet = row.packet;
       const route = packet.mode === 'route' ? packet.segments.map(segment => `${segment.from.label} -> ${segment.to.label}`).join(' | ') : 'Heard here; route unavailable';
-      return [new Date(packet.at).toISOString(), PACKET_KIND_LABELS[normalizePacketKind(packet.payloadType)], packet.mode, packet.mode === 'route' ? packet.segments.length : 0, route]
+      return [new Date(packet.at).toISOString(), PACKET_KIND_LABELS[normalizePacketKind(packet.payloadType)], packet.mode, packet.mode === 'route' ? packet.segments.length : 0, route, packet.rssi ?? '', packet.snr ?? '']
         .map(value => `"${String(value).replaceAll('"', '""')}"`).join(',');
     })].join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -68,15 +130,17 @@ export class TraceInspector {
   private render(): void {
     const filter = this.kind.value as PacketKind;
     const retained = this.store.all().filter(row => !filter || normalizePacketKind(row.packet.payloadType) === filter);
-    const rows = this.logMode ? [...retained].reverse() : retained.slice(-100).reverse();
+    const rows = this.logMode ? retained.slice(-this.visibleRows).reverse() : retained.filter(row => row.packet.at >= Date.now() - 15 * 60_000).slice(-100).reverse();
+    this.more.hidden = !this.logMode || rows.length >= retained.length;
     this.status.textContent = this.logMode
-      ? `${rows.length} retained observation${rows.length === 1 ? '' : 's'} · last 15 minutes · newest first`
-      : `${rows.length} recent observation${rows.length === 1 ? '' : 's'} · last 15 minutes · route data is live only`;
+      ? `${rows.length} of ${retained.length} saved observations · newest first`
+      : `${rows.length} recent observation${rows.length === 1 ? '' : 's'} · last 15 minutes · older observations in Log`;
     this.list.classList.toggle('trace-log', this.logMode);
     this.list.replaceChildren();
     for (const row of rows) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'trace-row';
       const kind = normalizePacketKind(row.packet.payloadType);
+      button.style.setProperty('--packet-color', PACKET_KIND_COLORS[kind]);
       const companion = kind === 'Other' ? companionName(row.packet) : '';
       const kindLabel = companion ? `${PACKET_KIND_LABELS[kind]} · Companion: ${companion}` : PACKET_KIND_LABELS[kind];
       const path = row.packet.mode === 'route' ? row.packet.segments.map(segment => `${segment.from.label} → ${segment.to.label}`).join(' · ') : 'Heard here; route unavailable';
@@ -84,9 +148,9 @@ export class TraceInspector {
         button.classList.add('trace-log-row');
         const stamp = document.createElement('time'); stamp.dateTime = new Date(row.packet.at).toISOString(); stamp.textContent = new Date(row.packet.at).toLocaleString();
         const meta = document.createElement('span'); meta.className = 'trace-log-meta'; meta.textContent = `${kindLabel} · ${row.packet.mode === 'route' ? `${row.packet.segments.length} hops` : 'observer'}`;
-        const route = document.createElement('span'); route.className = 'trace-log-path'; route.textContent = path;
+        const route = document.createElement('span'); route.className = 'trace-log-path'; route.textContent = `${path} · ${radioLabel(row.packet)}`;
         button.append(stamp, meta, route);
-      } else button.textContent = `${new Date(row.packet.at).toLocaleTimeString()} · ${kindLabel} · ${path}`;
+      } else button.textContent = `${new Date(row.packet.at).toLocaleTimeString()} · ${kindLabel} · ${path} · ${radioLabel(row.packet)}`;
       button.addEventListener('click', () => { this.selected = row; this.onSelect(row.packet); this.render(); void this.loadRouteHistory(row.packet); });
       if (row === this.selected) button.dataset.selected = 'true';
       this.list.append(button);
