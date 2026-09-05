@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { NodeV2, RouteV2, StateV2 } from '../src/types';
+import { viewStorageKey } from '../src/preferences';
 
 // Playwright trace screencasts read back the WebGL canvas and create synthetic
 // GPU stalls. Keep this timing gate capture-free; it writes evidence explicitly
@@ -8,6 +9,11 @@ test.use({ screenshot: 'off', trace: 'off' });
 
 test('keeps a 4k-node / 7k-route first view responsive', async ({ page }, testInfo) => {
   const state = scaleState();
+  // A deployment HOME_BOUNDS must not put the load fixture off-screen.
+  await page.addInitScript(({ key, view }) => localStorage.setItem(key, JSON.stringify(view)), {
+    key: viewStorageKey(testInfo.project.name.startsWith('mobile') ? 'mobile' : 'desktop'),
+    view: { center: [-81.3, 43.56], zoom: 5.5 }
+  });
   const firstRoute = state.routes[0];
   if (!firstRoute) throw new Error('scale fixture has no routes');
   const packet = {

@@ -2,6 +2,11 @@
 
 ## Unreleased — `quinte-deployment` fork
 
+- Complete the geographic-area Pi release checks; document the remaining
+  extreme-scale software-rendering limitation without weakening its test.
+  Make browser software rendering explicit and seed the scale fixture's camera
+  independently of deployment home bounds. Add a dependency-free area cost check.
+
 Deployment fork for the Quinte West / Belleville (YTR) mesh. Both additions are
 optional and default to upstream behaviour.
 

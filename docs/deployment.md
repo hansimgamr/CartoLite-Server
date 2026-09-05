@@ -136,9 +136,12 @@ operator-defined display rectangle, separately from `HOME_BOUNDS` and the MQTT
 default; changes require rebuilding the frontend/container. The source contains
 no regional default. See [area controls and validation](traffic-area.md).
 
-R3 integrates the area into all display consumers. It does not restrict the
-public API or MQTT intake. R4 still performs full release checks and backup
-before deploying the source checkpoint to a running instance.
+The area is integrated into all display consumers and released on the deployment
+fork. It does not restrict the public API or MQTT intake. See the R4 results and
+known extreme-scale limitation in [traffic-area.md](traffic-area.md). When using
+a parent Compose project, wire all three `VITE_AREA_PRESET_*` build arguments
+there too; changing this repository's standalone Compose file alone has no
+effect on a parent project. Preserve its existing networking and runtime values.
 
 ## Layer defaults
 

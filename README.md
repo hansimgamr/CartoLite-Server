@@ -134,6 +134,7 @@ This repository contains the standalone server and browser map. It has no countr
 ## Documentation
 
 - [Deployment](docs/deployment.md)
+- [Geographic traffic areas and release checks](docs/traffic-area.md)
 - [Architecture](docs/architecture.md)
 - [Privacy boundary](docs/privacy.md)
 - [Public API v2](docs/public-api.md)

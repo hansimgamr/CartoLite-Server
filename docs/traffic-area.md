@@ -1,7 +1,8 @@
 # Geographic traffic projection
 
-Status: R3 display integration implemented. The applied area filters topology
-and every live display consumer. Pi release remains a separate R4 approval.
+Status: R1-R4 delivered. The applied area filters topology and every live
+display consumer; the deployment fork has completed its Pi release checks.
+See the R4 results and the remaining extreme-scale rendering limitation below.
 
 `web/src/trafficArea.ts` projects the existing sanitized schema v2 state and
 resolved packet views into a rectangular display area. It adds no dependency,
@@ -32,9 +33,9 @@ feed. This display filter is not an access-control boundary.
 ## Release gate
 
 R1 provided projections, R2 the editor, and R3 connects topology, search/focus,
-animation, sound, local observations and Follow. R4 still performs full backend,
-privacy, performance, production integration and backup/release checks before
-deployment. A completed source checkpoint is not a claim of a live Pi release.
+animation, sound, local observations and Follow. R4 tested and deployed that
+implementation. Operators must still repeat their own backend, privacy,
+integration, backup and browser checks before upgrading another instance.
 
 ## Area controls (R2)
 
@@ -95,8 +96,49 @@ unsaved drafts change the outline, not the traffic filter.
   area never makes a connected feed appear offline.
 
 The filtered path scans the current nodes/routes on batched topology updates;
-normal unchanged-membership deltas remain incremental. R4 must profile realistic
-traffic before adding a membership index or making performance claims.
+normal unchanged-membership deltas remain incremental. R4 measured this path;
+no membership index or new dependency was needed for the deployed scale.
+
+## R4 release checks - 2026-09-04
+
+- Frontend: 129 unit tests, TypeScript/build, all 30 isolated area-browser checks
+  across five viewport profiles. Compressed JS/CSS was 317,797 bytes against a
+  358,400-byte budget. The standard Vite large-chunk advisory remains.
+- Backend: module verification, tests and vet passed on arm64; tests, vet and
+  race passed on Linux amd64. The Pi kernel exposes a 39-bit virtual address
+  range, which this Go arm64 race runtime rejects; do not report that failed
+  runtime launch as a race-free arm64 test or change the kernel just to run it.
+- Isolated broker/container: health/readiness, synthetic snapshot/SSE privacy
+  and route-reference checks passed. 1,200 observations were published at
+  2,729/s with eight SSE clients, 188 ms broker-to-stream latency, no drops,
+  13,216 KiB RSS and zero process writes during the measured burst. These are
+  short synthetic measurements, not sustained throughput guarantees.
+- Production: configured preset, real vector tiles/glyphs, scoped counts,
+  Apply/Cancel/Clear/reload and containment verified on desktop, phone, small
+  phone and tablet. Public schema/SSE stayed unchanged; strict CSP remained.
+  The deployed executable matched the tested candidate byte-for-byte.
+- A private checkpoint/config/image backup was copied off-device and verified.
+  The old image successfully restored that checkpoint in an isolated container
+  with MQTT disabled. No production data, credentials or captures are in Git.
+
+Reproduce the projection-only cost check with:
+
+```sh
+node --experimental-strip-types scripts/check-area-cost.mjs
+```
+
+At 4,000 nodes/7,000 routes, projection plus delta selection and a 20-hop packet
+took 0.82 ms median / 1.27 ms p95 on the release-check workstation. This is not
+a GPU-frame measurement. The browser burst-coalescing checks passed on desktop,
+phone and landscape, and the tablet layout check passed.
+
+**Known follow-up, not an all-green stress-suite claim:** with real tiles and
+software WebGL, the 4k/7k neighbour-selection stress check exceeded its 750 ms
+long-task limit on desktop/phone (1,501/1,678 ms). The prior deployed image also
+failed the same check (1,441/927 ms); landscape passed on the candidate. No
+threshold was relaxed. This is a remaining large-topology rendering issue,
+separate from the local-area release; the deployed topology was under 200 nodes.
+Profile rendering before claiming smooth operation at 4k nodes on software GPUs.
 
 ## R3 checks
 
