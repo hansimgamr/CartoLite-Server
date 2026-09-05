@@ -8,4 +8,6 @@ The current filtered window can be downloaded as CSV with time, normalized kind,
 
 Mapped route timestamps are retained in the server checkpoint for up to seven days, with a bounded sample per route. `GET /api/route-history?routes=<id,...>` returns only requested opaque route IDs and receipt times, plus `partial: true`; the inspector uses it to show selected-segment activity. This is route observation history, not reconstructed packet replay or RF distance.
 
+When a route is selected, **Fit route** moves the map to the packet's published endpoints. **Replay (illustrative)** animates the selected observation through the map animator; it is a visual aid and does not alter live counters, route history or follow mode.
+
 This is a live browser window, not historical replay. Reconnect or sequence recovery clears the trace window. Route length, RF distance, delivery, latency and unique-transmission claims are intentionally unsupported.
