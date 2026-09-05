@@ -38,6 +38,34 @@ export async function fetchManualNodes(signal?: AbortSignal): Promise<NodeV2[]> 
   });
 }
 
+export interface PlannedDeployment {
+  id: string;
+  label: string;
+  location: string;
+  status: string;
+  plannedFor: string;
+  lat: number;
+  lng: number;
+  emoji: string;
+}
+
+export async function fetchPlannedDeployments(signal?: AbortSignal): Promise<PlannedDeployment[]> {
+  const response = await fetch('/api/manual-nodes', { cache: 'no-store', credentials: 'same-origin', signal });
+  if (!response.ok) throw new Error(`planned deployment request failed (${response.status})`);
+  const body: unknown = await response.json();
+  const rows = body && typeof body === 'object' && Array.isArray((body as { planned?: unknown }).planned)
+    ? (body as { planned: unknown[] }).planned : [];
+  return rows.flatMap((row): PlannedDeployment[] => {
+    if (!row || typeof row !== 'object') return [];
+    const plan = row as Partial<PlannedDeployment>;
+    if (typeof plan.id !== 'string' || typeof plan.label !== 'string' || typeof plan.location !== 'string'
+      || typeof plan.status !== 'string' || typeof plan.plannedFor !== 'string' || typeof plan.emoji !== 'string'
+      || !Number.isFinite(plan.lat) || !Number.isFinite(plan.lng)) return [];
+    return [{ id: plan.id, label: plan.label, location: plan.location, status: plan.status,
+      plannedFor: plan.plannedFor, lat: plan.lat!, lng: plan.lng!, emoji: plan.emoji }];
+  });
+}
+
 export interface LiveFeedHandlers {
   onConnection(connected: boolean): void;
   onNode(event: NodeEventV2): void;

@@ -1,6 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './styles.css';
-import { fetchManualNodes, fetchState, LiveFeed } from './api';
+import { Marker, Popup } from 'maplibre-gl';
+import { fetchManualNodes, fetchPlannedDeployments, fetchState, LiveFeed, type PlannedDeployment } from './api';
 import { setupAreaControls } from './areaControls';
 import { RouteSonifier, type SoundScene, type SoundStatus } from './audio';
 import {
@@ -142,6 +143,29 @@ function releaseScreenAwake(): void {
   void sentinel.release().catch(() => undefined);
 }
 
+function renderPlannedDeployments(map: LiveMap['map'], plans: readonly PlannedDeployment[], markers: Marker[]): void {
+  markers.splice(0).forEach((marker) => marker.remove());
+  plans.forEach((plan) => {
+    const element = document.createElement('button');
+    element.type = 'button';
+    element.className = 'planned-deployment-marker';
+    element.textContent = plan.emoji || '📅';
+    element.title = `${plan.label} · ${plan.status}`;
+    element.setAttribute('aria-label', `Planned deployment: ${plan.label}`);
+    const content = document.createElement('div');
+    content.className = 'planned-deployment-popup';
+    const title = document.createElement('strong');
+    title.textContent = `${plan.emoji || '📅'} ${plan.label}`;
+    const detail = document.createElement('span');
+    detail.textContent = `${plan.status} · ${plan.location} · ${plan.lat.toFixed(5)}, ${plan.lng.toFixed(5)}`;
+    content.append(title, detail);
+    markers.push(new Marker({ element, anchor: 'bottom' })
+      .setLngLat([plan.lng, plan.lat])
+      .setPopup(new Popup({ offset: 18, closeButton: true, closeOnClick: true }).setDOMContent(content))
+      .addTo(map));
+  });
+}
+
 function setLayersOpen(open: boolean): void {
   layersDisclosure.toggleAttribute('open', open);
   layersSummary.setAttribute('aria-expanded', String(open));
@@ -213,6 +237,7 @@ function wireStatusConsoleLink(): void {
 
 async function start(): Promise<void> {
   wireStatusConsoleLink();
+  let plannedMarkers: Marker[] = [];
   let mapView: LiveMap | undefined;
   let animator: PacketAnimator | undefined;
   let sonifier: RouteSonifier | undefined;
@@ -239,6 +264,24 @@ async function start(): Promise<void> {
       },
     );
     mapView = liveMap;
+    plannedMarkers = [];
+    const pickerMode = new URLSearchParams(window.location.search).get('picker') === '1';
+    if (pickerMode) {
+      appElement.classList.add('picker-mode');
+      const hint = document.createElement('div');
+      hint.className = 'picker-hint';
+      hint.textContent = 'Click the map to place this deployment';
+      appElement.append(hint);
+      liveMap.map.on('click', (event) => {
+        if (!window.opener || window.opener.closed) {
+          hint.textContent = 'Open this picker from the deployment form first';
+          return;
+        }
+        window.opener.postMessage({ type: 'mesh-map-pick', latitude: event.lngLat.lat, longitude: event.lngLat.lng }, 'https://deploy.hansimgamr.net');
+        hint.textContent = `Selected ${event.lngLat.lat.toFixed(5)}, ${event.lngLat.lng.toFixed(5)}`;
+        window.setTimeout(() => window.close(), 400);
+      });
+    }
     let activeArea: AreaBounds | null = null;
     let applyAreaChange: (() => void) | undefined;
     areaControls = setupAreaControls(liveMap.map, (bounds) => {
@@ -399,7 +442,12 @@ async function start(): Promise<void> {
       releaseScreenAwake();
     }, { once: true });
 
-    const [initial, manualNodes] = await Promise.all([fetchState(), fetchManualNodes().catch(() => [])]);
+    const [initial, manualNodes, plannedDeployments] = await Promise.all([
+      fetchState(),
+      fetchManualNodes().catch(() => []),
+      fetchPlannedDeployments().catch(() => [])
+    ]);
+    renderPlannedDeployments(liveMap.map, plannedDeployments, plannedMarkers);
     const liveStore = new LiveStore(initial);
     store = liveStore;
     let streamConnected = false;
@@ -649,6 +697,7 @@ async function start(): Promise<void> {
     sonifier?.destroy();
     areaControls?.destroy();
     mapView?.destroy();
+    plannedMarkers.splice(0).forEach((marker) => marker.remove());
     statusElement.dataset.state = 'offline';
     statusText.textContent = 'Unavailable';
     fatal.textContent = error instanceof Error ? error.message : 'CartoLite could not start';
