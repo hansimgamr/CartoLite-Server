@@ -2,7 +2,7 @@
 
 ## Unreleased — `quinte-deployment` fork
 
-- Keep manual scroll position in the lower-left live packet chat and add a red “Live” / “Not live” control; clicking it or scrolling to the newest packet resumes auto-scrolling.
+- Keep manual scroll position in the lower-left live packet chat and add a green “Live” / red “Not live” control; clicking it or scrolling to the newest packet resumes auto-scrolling.
 
 - Complete the geographic-area Pi release checks; document the remaining
   extreme-scale software-rendering limitation without weakening its test.
