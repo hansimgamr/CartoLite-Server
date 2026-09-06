@@ -36,3 +36,5 @@ New packet records may include a `measurement` receiver and safely resolved fina
 Stage 2 adds `/api/signal-coverage` with required `node`, `direction=incoming|outgoing`, and `window=1h|24h|7d`. It returns exact retained signal summaries with sample counts, age, location flags, and exclusions. See [the coverage plan](signal-coverage-plan.md) for duplicate and retention limits.
 
 Stage 3: select a repeater and choose **Signal coverage** for measured RSSI/SNR points and direction/history controls. White rings mark sparse samples; faded points flag uncertain location age. Use the measurement selector for details or coincident points. No area between receivers is assumed covered.
+
+Stage 4 stores seven days of bounded five-minute signal aggregates independently of raw-log pruning. Median values are approximate (1 dB RSSI / 0.25 dB SNR bins); ranges remain exact. The earliest bucket may extend a selected window by less than five minutes. Raw-log exclusions have their own scope. See [coverage retention limits](signal-coverage-plan.md).

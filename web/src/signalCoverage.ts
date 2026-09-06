@@ -74,7 +74,7 @@ export class SignalCoverage {
       if (request.signal.aborted) return;
       this.rows = data.summaries;
       const excluded = Object.entries(data.excluded).map(([reason,count]) => `${count} ${reason.replaceAll('-', ' ')}`).join('; ');
-      this.status.textContent = `${this.rows.length ? `${this.rows.length} measurement groups` : 'Not enough measurements'} · retained history is partial.${excluded ? ` Excluded: ${excluded}.` : ''}`;
+      this.status.textContent = `${this.rows.length ? `${this.rows.length} measurement groups` : 'Not enough measurements'} · saved coverage is partial · 5-minute buckets · approximate medians.${excluded ? ` Excluded from retained raw history: ${excluded}.` : ''}`;
       this.draw();
     } catch {
       if (request.signal.aborted) return;
@@ -87,7 +87,7 @@ export class SignalCoverage {
     const thresholds = metric === 'rssi' ? ['< −120','−120 to −105','−105 to −90','≥ −90'] : ['< −10','−10 to 0','0 to 10','≥ 10'];
     this.legend.replaceChildren();
     thresholds.forEach((label,i) => { const item = document.createElement('span'); item.textContent = `${label} ${metric === 'rssi' ? 'dBm' : 'dB'}`; item.style.borderColor = ['#ee91ae','#e9b66e','#70c5ed','#59dfba'][i]!; this.legend.append(item); });
-    const note = document.createElement('small'); note.textContent = 'Colour = median signal, not delivery rate. White ring = fewer than 3 samples. Faded = stale or unknown location age. Unmeasured areas stay unknown.';
+    const note = document.createElement('small'); note.textContent = 'Colour = approximate median signal, not delivery rate. White ring = fewer than 3 samples. Faded = stale or unknown location age. Unmeasured areas stay unknown.';
     this.legend.append(note);
     this.list.replaceChildren(new Option('Inspect a measurement…','')); this.detail.replaceChildren();
     const features = this.rows.flatMap((row,index) => {
@@ -115,7 +115,7 @@ export class SignalCoverage {
     this.detail.append(heading,description);
     for (const metric of ['rssi','snr'] as const) {
       const value = row[metric]; if (!value) continue;
-      const line = document.createElement('p'); line.textContent = `${metric.toUpperCase()}: median ${value.median}, range ${value.min} to ${value.max} ${metric === 'rssi' ? 'dBm' : 'dB'} · ${value.count} readings`; this.detail.append(line);
+      const line = document.createElement('p'); line.textContent = `${metric.toUpperCase()}: approx. median ${value.median}, range ${value.min} to ${value.max} ${metric === 'rssi' ? 'dBm' : 'dB'} · ${value.count} readings`; this.detail.append(line);
     }
   }
 }

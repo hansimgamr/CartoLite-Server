@@ -95,7 +95,8 @@ func New(options Options) (*Engine, error) {
 	if options.Logger == nil {
 		options.Logger = slog.Default()
 	}
-	nodes, routes, packets, err := loadCheckpoint(options.Checkpoint)
+	var archive signalArchive
+	nodes, routes, packets, err := loadCheckpoint(options.Checkpoint, &archive)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +120,13 @@ func New(options Options) (*Engine, error) {
 		nodeIDs:    make(map[string]*privateNode),
 		prefixes:   make(map[string]map[string]struct{}),
 		routes:     routes,
+	}
+	e.packets.coverage = archive
+	if archive.buckets == nil {
+		for _, row := range packets {
+			e.packets.coverage.add(row)
+		}
+		e.packets.coverage.prune(time.Now().UnixMilli())
 	}
 	e.packets.rows = packets
 	e.packets.prune(time.Now().UnixMilli())
@@ -611,7 +619,10 @@ func (e *Engine) flushCheckpoint(now time.Time) (bool, bool) {
 	prunedRoutes, prunedNodes := e.pruneDurableState(now.UnixMilli())
 	pruned := prunedRoutes > 0 || prunedNodes > 0
 	started := time.Now()
-	if err := writeCheckpoint(e.checkpoint, e.nodes, e.routes, e.PacketHistory()...); err != nil {
+	e.packets.mu.Lock()
+	coverage := e.packets.coverage.snapshot(now.UnixMilli())
+	e.packets.mu.Unlock()
+	if err := writeCheckpointWithCoverage(e.checkpoint, e.nodes, e.routes, coverage, e.PacketHistory()...); err != nil {
 		e.checkpointOK.Store(false)
 		e.log.Error("checkpoint write failed", "error", err)
 		return pruned, false

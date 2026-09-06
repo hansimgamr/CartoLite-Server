@@ -123,6 +123,9 @@ export interface SignalSummaryV2 {
   snr?: SignalStatsV2;
 }
 export interface SignalCoverageV2 {
+  bucketMinutes: number;
+  approximateMedian: boolean;
+  exclusionScope: string;
   schemaVersion: 2;
   nodeId: string;
   direction: 'incoming' | 'outgoing';
