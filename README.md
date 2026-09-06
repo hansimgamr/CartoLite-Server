@@ -47,8 +47,7 @@
 >
 > See [Deployment](docs/deployment.md) for configuration. The
 > privacy boundary is preserved. The active `feat/live-traces` branch also adds
-> sanitized observation history and measured signal coverage, documented below.
-
+>
 ![CartoLite Server showing active MeshCore nodes and routes across the Great Lakes](docs/assets/cartolite-overview.webp)
 
 <p align="center"><sub>Live topology across the Great Lakes, with routes coloured by packet type.</sub></p>
@@ -141,7 +140,6 @@ This repository contains the standalone server and browser map. It has no countr
 - [Public API v2](docs/public-api.md)
 - [Data sources](docs/data-sources.md)
 - [Live Traces and saved radio observations](docs/live-traces.md)
-- [Signal coverage stages and release checkpoints](docs/signal-coverage-plan.md)
 - [Sound and animation](docs/sound-and-animation.md)
 - [Security policy](SECURITY.md)
 
