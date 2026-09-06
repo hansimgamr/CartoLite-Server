@@ -49,7 +49,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/state", s.state)
 	mux.HandleFunc("GET /api/route-history", s.routeHistory)
 	mux.HandleFunc("GET /api/packet-history", s.packetHistory)
-	mux.HandleFunc("GET /api/signal-coverage", s.signalCoverage)
 	mux.HandleFunc("GET /api/events", s.events)
 	mux.HandleFunc("/", s.frontend)
 	return securityHeaders(mux)
@@ -312,17 +311,4 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https://*.basemaps.cartocdn.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.basemaps.cartocdn.com https://tiles.mapterhorn.com; worker-src 'self' blob:; child-src blob:")
 		next.ServeHTTP(w, r)
 	})
-}
-
-func (s *Server) signalCoverage(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	id, direction, window := q.Get("node"), q.Get("direction"), q.Get("window")
-	if !strings.HasPrefix(id, "n-") || len(id) < 3 || len(id) > 64 || strings.IndexFunc(id, func(c rune) bool {
-		return !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_')
-	}) >= 0 || (direction != "incoming" && direction != "outgoing") || (window != "1h" && window != "24h" && window != "7d") {
-		http.Error(w, "node, direction (incoming/outgoing), and window (1h/24h/7d) are required", http.StatusBadRequest)
-		return
-	}
-	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, s.engine.SignalCoverage(id, direction, window, time.Now().UnixMilli()))
 }

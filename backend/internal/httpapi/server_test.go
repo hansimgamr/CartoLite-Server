@@ -267,19 +267,3 @@ func (w *sseRaceWriter) Flush() {
 		w.flush(w.count)
 	}
 }
-
-func TestSignalCoverageQueryValidation(t *testing.T) {
-	handler := testHandler(t, true)
-	for _, query := range []string{"", "?node=n-test&direction=bad&window=1h", "?node=n-test&direction=incoming&window=30d", "?node=secret&direction=incoming&window=1h"} {
-		response := httptest.NewRecorder()
-		handler.ServeHTTP(response, httptest.NewRequest("GET", "/api/signal-coverage"+query, nil))
-		if response.Code != 400 {
-			t.Fatalf("query accepted: %s", query)
-		}
-	}
-	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, httptest.NewRequest("GET", "/api/signal-coverage?node=n-test&direction=outgoing&window=24h", nil))
-	if response.Code != 200 || response.Header().Get("Cache-Control") != "no-store" || !strings.Contains(response.Body.String(), `"summaries":[]`) {
-		t.Fatal("invalid empty summary response")
-	}
-}
