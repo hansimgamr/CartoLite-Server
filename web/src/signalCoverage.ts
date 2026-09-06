@@ -16,6 +16,9 @@ export class SignalCoverage {
   private status = document.createElement('p');
   private legend = document.createElement('p');
   private detail = document.createElement('div');
+  private prediction = document.createElement('section');
+  private predictionStatus = document.createElement('p');
+  private predictionInputs: Record<string, HTMLInputElement> = {};
   private list = document.createElement('select');
   private title = document.createElement('strong');
   private node?: NodeV2;
@@ -40,8 +43,27 @@ export class SignalCoverage {
     this.direction.onchange = this.window.onchange = () => { void this.load(); };
     this.metric.onchange = () => this.draw();
     this.list.setAttribute('aria-label','Inspect measurement location'); this.list.onchange = () => this.inspect(Number(this.list.value));
+    this.prediction.className = 'signal-prediction-inputs';
+    const predictionHeading = document.createElement('strong'); predictionHeading.textContent = 'Prediction inputs · this repeater';
+    const predictionNote = document.createElement('small'); predictionNote.textContent = 'Values vary by hardware. Saved only in this browser; measured data above is unchanged.';
+    const predictionForm = document.createElement('form'); predictionForm.className = 'signal-prediction-form';
+    const fields: [string,string,string,string][] = [
+      ['txPower','Transmit power','dBm','1'], ['antennaHeight','Antenna height','m','0'],
+      ['antennaGain','Antenna gain','dBi','0'], ['cableLoss','Cable loss','dB','0'],
+      ['receiverHeight','Receiver height','m','0'], ['receiverGain','Receiver gain','dBi','0'],
+    ];
+    for (const [name,label,unit,min] of fields) {
+      const wrap = document.createElement('label'); wrap.textContent = label + ' (' + unit + ')';
+      const input = document.createElement('input'); input.name = name; input.type = 'number'; input.step = 'any'; input.min = min; input.inputMode = 'decimal'; input.required = true; input.autocomplete = 'off';
+      this.predictionInputs[name] = input; wrap.append(input); predictionForm.append(wrap);
+    }
+    const radio = document.createElement('small'); radio.textContent = 'MeshCore USA/Canada preset: 910.525 MHz · BW62.5 · SF7 · CR5';
+    const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Save inputs';
+    this.predictionStatus.className = 'signal-prediction-status'; this.predictionStatus.setAttribute('role','status');
+    predictionForm.append(radio, save); predictionForm.onsubmit = (event) => { event.preventDefault(); this.savePredictionInputs(); };
+    this.prediction.append(predictionHeading, predictionNote, predictionForm, this.predictionStatus);
     this.status.setAttribute('role','status');
-    this.root.append(header, controls, this.legend, this.status, this.list, this.detail);
+    this.root.append(header, controls, this.legend, this.status, this.list, this.detail, this.prediction);
     parent.append(this.root);
     this.map.on('style.load', this.draw);
     this.map.on('click', source, this.click);
@@ -50,6 +72,7 @@ export class SignalCoverage {
     this.close(); this.node = node; this.root.hidden = false;
     this.root.parentElement?.classList.add('coverage-open');
     this.title.textContent = `Measured signal · ${node.label}`;
+    this.loadPredictionInputs();
     void this.load();
     this.timer = window.setInterval(() => { void this.load(); }, 30_000);
     this.direction.focus({ preventScroll: true });
@@ -61,6 +84,28 @@ export class SignalCoverage {
     this.root.parentElement?.classList.remove('coverage-open'); this.draw();
   }
   destroy(): void { this.close(); this.map.off('style.load', this.draw); this.map.off('click', source, this.click); this.root.remove(); }
+  private inputKey(): string { return 'cartolite-signal-inputs:' + (this.node?.id ?? ''); }
+  private loadPredictionInputs(): void {
+    for (const input of Object.values(this.predictionInputs)) input.value = '';
+    this.predictionStatus.textContent = 'Prediction is waiting for these hardware values.';
+    try {
+      const raw = localStorage.getItem(this.inputKey()); if (!raw) return;
+      const values = JSON.parse(raw) as Record<string, unknown>;
+      for (const [name,input] of Object.entries(this.predictionInputs)) {
+        const value = values[name]; if (typeof value === 'number' && Number.isFinite(value)) input.value = String(value);
+      }
+      this.predictionStatus.textContent = 'Saved locally. Prediction remains disabled until the model is validated.';
+    } catch { /* storage is optional */ }
+  }
+  private savePredictionInputs(): void {
+    const values: Record<string, number> = {};
+    for (const [name,input] of Object.entries(this.predictionInputs)) {
+      const value = Number(input.value); if (!Number.isFinite(value) || value < Number(input.min)) { this.predictionStatus.textContent = 'Enter valid non-negative hardware values.'; input.focus(); return; }
+      values[name] = value;
+    }
+    try { localStorage.setItem(this.inputKey(), JSON.stringify(values)); this.predictionStatus.textContent = 'Saved locally. Prediction remains disabled until the model is validated.'; }
+    catch { this.predictionStatus.textContent = 'Could not save locally; keep these values available for the model setup.'; }
+  }
   private async load(): Promise<void> {
     if (!this.node) return;
     this.request?.abort(); const request = new AbortController(); this.request = request;

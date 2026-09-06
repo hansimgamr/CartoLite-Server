@@ -42,3 +42,6 @@ Stage 4 stores seven days of bounded five-minute signal aggregates independently
 ## Current panel layout
 
 The duplicate right-side Live Traces list is hidden. The lower-left scrolling packet chat is the visible live feed; older descriptions of the separate Live/Log panel above record its original release, not a second currently visible list. Saved observations continue to collect and restore independently of this layout. Selecting **Signal coverage** replaces node details and shares available space with the packet chat. Close it to restore node details.
+
+The Signal coverage panel also provides per-repeater prediction-input fields for the hardware values that vary between installations. They are validated and saved locally by node ID; the confirmed USA/Canada radio preset is shown for reference. These inputs are preparation for the future predicted layer and do not change measured coverage.
+\n
