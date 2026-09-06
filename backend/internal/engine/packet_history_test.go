@@ -16,7 +16,7 @@ func TestPacketHistorySurvivesCheckpointWithRadio(t *testing.T) {
 	a := EndpointV2{ID: opaqueID("n", "a"), Label: "North", Role: "repeater", Lat: 44, Lng: -77}
 	b := EndpointV2{ID: opaqueID("n", "b"), Label: "South", Role: "companion", Lat: 44.1, Lng: -77}
 	rssi, snr := -82.0, 6.25
-	e.emitPacket(time.Now().UnixMilli(), "Text", nil, &b, nil, nil, &rssi, &snr)
+	e.emitPacket(time.Now().UnixMilli(), "Text", nil, &b, nil, &rssi, &snr)
 	route := PacketViewV2{PacketEventV2: PacketEventV2{ID: opaqueID("p", "route"), At: time.Now().UnixMilli(), PayloadType: "Trace", Mode: "route"}, Segments: []HistorySegmentV2{{RouteID: routePublicID(a.ID, b.ID), From: a, To: b}}}
 	e.packets.add(route)
 	if _, ok := e.flushCheckpoint(time.Now()); !ok {
@@ -38,7 +38,7 @@ func TestPacketHistorySurvivesCheckpointWithRadio(t *testing.T) {
 	if err = json.Unmarshal(body, &public); err != nil {
 		t.Fatal(err)
 	}
-	allowed := map[string]bool{"seq": true, "id": true, "at": true, "payloadType": true, "mode": true, "observer": true, "segments": true, "rssi": true, "snr": true, "path": true, "partial": true, "measurement": true}
+	allowed := map[string]bool{"seq": true, "id": true, "at": true, "payloadType": true, "mode": true, "observer": true, "segments": true, "rssi": true, "snr": true, "path": true, "partial": true}
 	for _, row := range public {
 		for key := range row {
 			if !allowed[key] {

@@ -67,29 +67,18 @@ type PathStepV2 struct {
 	Node  *EndpointV2 `json:"node,omitempty"`
 }
 
-// SignalMeasurementV2 describes only reception at the final receiver.
-// Coordinates are last-known snapshots, not confirmed GPS fixes at packet time.
-type SignalMeasurementV2 struct {
-	Receiver              EndpointV2  `json:"receiver"`
-	Transmitter           *EndpointV2 `json:"transmitter,omitempty"`
-	ReceiverLocationAt    int64       `json:"receiverLocationAt,omitempty"`
-	TransmitterLocationAt int64       `json:"transmitterLocationAt,omitempty"`
-	LocationQuality       string      `json:"locationQuality"`
-}
-
 type PacketEventV2 struct {
-	Measurement *SignalMeasurementV2 `json:"measurement,omitempty"`
-	Path        []PathStepV2         `json:"path,omitempty"`
-	Partial     bool                 `json:"partial,omitempty"`
-	Seq         uint64               `json:"seq"`
-	ID          string               `json:"id"`
-	At          int64                `json:"at"`
-	PayloadType string               `json:"payloadType"`
-	Mode        string               `json:"mode"`
-	Segments    []RouteSegmentV2     `json:"segments,omitempty"`
-	Observer    *EndpointV2          `json:"observer,omitempty"`
-	RSSI        *float64             `json:"rssi,omitempty"`
-	SNR         *float64             `json:"snr,omitempty"`
+	Path        []PathStepV2     `json:"path,omitempty"`
+	Partial     bool             `json:"partial,omitempty"`
+	Seq         uint64           `json:"seq"`
+	ID          string           `json:"id"`
+	At          int64            `json:"at"`
+	PayloadType string           `json:"payloadType"`
+	Mode        string           `json:"mode"`
+	Segments    []RouteSegmentV2 `json:"segments,omitempty"`
+	Observer    *EndpointV2      `json:"observer,omitempty"`
+	RSSI        *float64         `json:"rssi,omitempty"`
+	SNR         *float64         `json:"snr,omitempty"`
 }
 
 type NodeEventV2 struct {
@@ -135,7 +124,6 @@ type privateNode struct {
 	Observer      bool    `json:"observer"`
 	Lat           float64 `json:"lat"`
 	Lng           float64 `json:"lng"`
-	CoordsAt      int64   `json:"coordsAt,omitempty"`
 	HasCoords     bool    `json:"hasCoords"`
 	LastSeen      int64   `json:"lastSeen"`
 	LastPublished int64   `json:"-"`

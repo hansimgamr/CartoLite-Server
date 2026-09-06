@@ -79,22 +79,6 @@ func validHistoryPacket(p PacketViewV2) bool {
 	if p.SNR != nil && safeRadio(p.SNR, -100, 100) == nil {
 		return false
 	}
-	if m := p.Measurement; m != nil {
-		if !endpointOK(m.Receiver) || m.LocationQuality != "last-known" || m.ReceiverLocationAt < 0 || m.TransmitterLocationAt < 0 || (p.RSSI == nil && p.SNR == nil) {
-			return false
-		}
-		if m.Transmitter != nil {
-			if !endpointOK(*m.Transmitter) || m.Transmitter.ID == m.Receiver.ID || len(p.Segments) == 0 {
-				return false
-			}
-			last := p.Segments[len(p.Segments)-1]
-			if last.From != *m.Transmitter || last.To != m.Receiver {
-				return false
-			}
-		} else if m.TransmitterLocationAt != 0 {
-			return false
-		}
-	}
 	if len(p.Path) > 520 {
 		return false
 	}

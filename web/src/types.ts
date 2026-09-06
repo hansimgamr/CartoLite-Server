@@ -60,16 +60,7 @@ export interface RouteSegmentEventV2 {
 
 export interface PathStepV2 { label: string; node?: EndpointV2; }
 
-export interface SignalMeasurementV2 {
-  receiver: EndpointV2;
-  transmitter?: EndpointV2;
-  receiverLocationAt?: number;
-  transmitterLocationAt?: number;
-  locationQuality: 'last-known';
-}
-
 interface PacketBaseV2 {
-  measurement?: SignalMeasurementV2;
   path?: PathStepV2[];
   partial?: boolean;
   seq: number;
