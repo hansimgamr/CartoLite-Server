@@ -172,8 +172,3 @@ The live Pi deployment was audited on 2026-09-05 before adding a propagation mod
 Because Longley–Rice/ITM results are meaningless without those inputs, no predicted layer, default RF values, filled polygon, or “coverage” claim was added. The measured overlay remains the only coverage view and stays explicitly partial. The optional topography layer is a visual elevation aid, not a propagation model.
 
 To resume Stage 5, provide per-deployment radio settings (frequency, bandwidth, spreading factor/coding rate, transmit power, antenna gain/height and cable loss), the receiving-antenna assumptions, and a suitable terrain dataset or service with its licensing and resolution. Then validate a small cached prediction on the Pi, display every assumption beside the layer, and compare it against held-out measured points before public enablement. Stage 6 field measurements remain required for validation.
-
-## Stage 5 UI checkpoint — per-repeater model inputs
-
-The measured signal panel now includes a per-repeater **Prediction inputs** form for transmit power, antenna height/gain, cable loss, and receiver antenna height/gain. Values are required, validated as non-negative numbers, and stored in browser local storage under the selected public node ID so one repeater's hardware does not overwrite another's. The confirmed USA/Canada MeshCore preset (910.525 MHz, BW62.5, SF7, CR5) is shown as context. The form does not alter measured data or enable predictions; it reports that prediction remains disabled until the propagation model and terrain validation are complete.
-\n

@@ -11,11 +11,6 @@ it('loads measurements, colours markers, shows details and clears them on close'
   const overlay = new SignalCoverage(map as unknown as MapLibreMap,parent);
   overlay.show({...receiver,role:'repeater',observer:true,lastSeen:2});
   await vi.waitFor(()=>expect(parent.textContent).toContain('1 measurement groups'));
-  const inputs = parent.querySelectorAll<HTMLInputElement>('.signal-prediction-form input');
-  expect(inputs).toHaveLength(6);
-  inputs.forEach((input) => { input.value = '1'; });
-  parent.querySelector<HTMLFormElement>('.signal-prediction-form')!.requestSubmit();
-  expect(parent.textContent).toContain('Saved locally');
   const data = setData.mock.calls.at(-1)?.[0];
   expect(data.features[0].properties).toMatchObject({colour:'#70c5ed',sparse:true,uncertain:true});
   const list = parent.querySelector<HTMLSelectElement>('[aria-label="Inspect measurement location"]')!;

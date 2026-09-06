@@ -712,16 +712,6 @@ button { font: inherit; }
 .signal-coverage-panel p { margin:10px 0; }
 .signal-coverage-panel p span { display:inline-block; border-left:4px solid; padding-left:6px; margin:4px 10px 4px 0; }
 .signal-coverage-panel small { display:block; color:#9cb5bf; }
-.signal-prediction-inputs { margin-top:14px; padding-top:12px; border-top:1px solid #31535b; display:grid; gap:6px; }
-.signal-prediction-inputs > strong { color:#dcf6f0; }
-.signal-prediction-inputs > small { color:#9cb5bf; }
-.signal-prediction-form { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }
-.signal-prediction-form label { display:grid; gap:3px; color:#a4bec7; }
-.signal-prediction-form input { width:100%; min-height:38px; box-sizing:border-box; padding:7px; color:#dcf6f0; background:#102830; border:1px solid #31535b; border-radius:7px; font:inherit; }
-.signal-prediction-form small { grid-column:1 / -1; color:#9cb5bf; }
-.signal-prediction-form button { grid-column:1 / -1; min-height:40px; color:#08251f; background:#59dfba; border:0; border-radius:8px; font-weight:700; cursor:pointer; }
-.signal-prediction-status { margin:4px 0 0 !important; color:#bde6e3; }
-
 .signal-coverage-panel :focus-visible { outline:2px solid #59dfba; outline-offset:2px; }
 .coverage-open .node-inspector-sheet { display:none; }
 button.node-inspector-console-link { background:transparent; cursor:pointer; min-height:44px; }
