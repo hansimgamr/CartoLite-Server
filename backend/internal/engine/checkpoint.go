@@ -11,14 +11,13 @@ import (
 )
 
 type checkpointV1 struct {
-	Coverage      *signalArchiveState `json:"coverage,omitempty"`
-	SchemaVersion int                 `json:"schemaVersion"`
-	Nodes         []*privateNode      `json:"nodes"`
-	Routes        []*privateRoute     `json:"routes"`
-	Packets       []PacketViewV2      `json:"packets,omitempty"`
+	SchemaVersion int             `json:"schemaVersion"`
+	Nodes         []*privateNode  `json:"nodes"`
+	Routes        []*privateRoute `json:"routes"`
+	Packets       []PacketViewV2  `json:"packets,omitempty"`
 }
 
-func loadCheckpoint(path string, coverage ...*signalArchive) (map[string]*privateNode, map[string]*privateRoute, []PacketViewV2, error) {
+func loadCheckpoint(path string) (map[string]*privateNode, map[string]*privateRoute, []PacketViewV2, error) {
 	nodes := make(map[string]*privateNode)
 	routes := make(map[string]*privateRoute)
 	body, err := os.ReadFile(path)
@@ -34,11 +33,6 @@ func loadCheckpoint(path string, coverage ...*signalArchive) (map[string]*privat
 	}
 	if saved.SchemaVersion != 1 {
 		return nil, nil, nil, fmt.Errorf("unsupported checkpoint schema %d (move the file aside to recover)", saved.SchemaVersion)
-	}
-	if len(coverage) > 0 {
-		if err := coverage[0].restore(saved.Coverage); err != nil {
-			return nil, nil, nil, err
-		}
 	}
 	for _, node := range saved.Nodes {
 		if node == nil || node.Region == "" || node.Key == "" {
@@ -155,11 +149,7 @@ func validCheckpointRegion(value string) bool {
 }
 
 func writeCheckpoint(path string, nodes map[string]*privateNode, routes map[string]*privateRoute, packets ...PacketViewV2) error {
-	return writeCheckpointWithCoverage(path, nodes, routes, nil, packets...)
-}
-
-func writeCheckpointWithCoverage(path string, nodes map[string]*privateNode, routes map[string]*privateRoute, coverage *signalArchiveState, packets ...PacketViewV2) error {
-	saved := checkpointV1{Coverage: coverage, Packets: packets, SchemaVersion: 1, Nodes: make([]*privateNode, 0, len(nodes)), Routes: make([]*privateRoute, 0, len(routes))}
+	saved := checkpointV1{Packets: packets, SchemaVersion: 1, Nodes: make([]*privateNode, 0, len(nodes)), Routes: make([]*privateRoute, 0, len(routes))}
 	for _, node := range nodes {
 		copy := *node
 		saved.Nodes = append(saved.Nodes, &copy)

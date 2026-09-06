@@ -24,9 +24,8 @@ type PacketViewV2 struct {
 }
 
 type packetHistory struct {
-	coverage signalArchive
-	mu       sync.Mutex
-	rows     []PacketViewV2
+	mu   sync.Mutex
+	rows []PacketViewV2
 }
 
 func (h *packetHistory) prune(now int64) {
@@ -47,10 +46,6 @@ func (h *packetHistory) prune(now int64) {
 func (h *packetHistory) add(packet PacketViewV2) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.coverage.add(packet)
-	if time.Now().UnixMilli()-h.coverage.prunedAt > 60000 {
-		h.coverage.prune(time.Now().UnixMilli())
-	}
 	h.rows = append(h.rows, packet)
 	h.prune(time.Now().UnixMilli())
 }

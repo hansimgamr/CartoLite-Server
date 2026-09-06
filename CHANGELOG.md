@@ -86,7 +86,3 @@ optional and default to upstream behaviour.
 ### Signal coverage map (Stage 3)
 
 - Add measured signal controls and coloured point markers to the shared map, with labelled RSSI/SNR bands, sparse/location-age indicators, and accessible measurement details. Keep coverage and packet chat separate on mobile and restore node details when coverage closes.
-
-### Persistent signal coverage (Stage 4)
-
-- Preserve bounded seven-day/five-minute signal histograms in the atomic checkpoint independently of raw packet retention. Import eligible history once, retain location/direction groups, and preserve recent dedup identities across restart. Label approximate medians and raw-only exclusion diagnostics.

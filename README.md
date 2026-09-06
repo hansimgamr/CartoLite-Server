@@ -152,7 +152,3 @@ This repository contains the standalone server and browser map. It has no countr
 ## Saved packet and radio log
 
 The map now restores the latest 10,000 sanitized observations (up to seven days) across visits, including optional receiver RSSI/SNR. Collection continues on the server while you are away. The lower-left packet chat shows the latest 24 events; green **Live** follows arrivals and red **Not live** preserves manual scrolling. The duplicate right-side trace list is hidden. See [Live Traces](docs/live-traces.md) for retention, checkpoint durability, CSV export and mobile behaviour.
-
-### Measured signal coverage
-
-Select a repeater and choose **Signal coverage** to inspect incoming/outgoing RSSI and SNR observations. Bounded five-minute histograms preserve seven days independently of the raw log; medians are approximate and unmeasured areas remain unknown. See [the staged coverage plan](docs/signal-coverage-plan.md) for retention, precision, validation, and prediction prerequisites.
