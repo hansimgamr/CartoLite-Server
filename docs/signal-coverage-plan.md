@@ -6,8 +6,8 @@ Add **Measured signal** to each repeater first, then introduce **Predicted cover
 
 Stage 1 implemented and deployed: explicit final-hop measurement snapshots. Stage 2 summaries are implemented; Stage 3 map controls and markers are implemented; Stage 4 persistent aggregates are implemented. Stages 5–6 require radio/terrain inputs and field validation.
 
-Checkpoint validation (2026-09-05): Go tests and vet passed; all 132 frontend tests and frontend/container builds passed; isolated synthetic MQTT integration/privacy smoke passed; `git diff --check` passed. Go race checks were attempted but cannot execute on the Pi kernel (`ThreadSanitizer: unsupported VMA range`, found 39, supports 48); rerun on a supported CI host. The deployed container is healthy. Initial direct service API verification found 2,866 retained observations, including four newly captured measurements with final transmitters. Public HTTPS verification from the Pi returned 403; direct service verification succeeded.
-No coverage markers or prediction layer are enabled yet.
+Stage 1 checkpoint validation (2026-09-05): Go tests and vet passed; all 132 frontend tests and frontend/container builds passed; isolated synthetic MQTT integration/privacy smoke passed; `git diff --check` passed. Go race checks were attempted but cannot execute on the Pi kernel (`ThreadSanitizer: unsupported VMA range`, found 39, supports 48); rerun on a supported CI host. The deployed container is healthy. Initial direct service API verification found 2,866 retained observations, including four newly captured measurements with final transmitters. Public HTTPS verification from the Pi returned 403; direct service verification succeeded.
+At the Stage 1 checkpoint no coverage markers were enabled. Measured markers are now available (Stage 3), with persistent aggregates (Stage 4); prediction remains unimplemented. Earlier checkpoint sections below describe their original release behavior; Stage 4 supersedes raw-only summary retention and exact medians.
 
 ### Stage 1 data audit and attribution contract
 
@@ -141,7 +141,7 @@ Select a repeater or room server and choose **Signal coverage**. This uses the s
 
 Markers show median signal using four labelled bands: RSSI below -120, -120 to -105, -105 to -90, and at least -90 dBm; SNR below -10, -10 to 0, 0 to 10, and at least 10 dB. These are display bands, not receiver sensitivity or delivery thresholds. A white ring indicates fewer than three metric readings; faded markers indicate stale or unknown-age locations. Only measured points are drawn, with no interpolated coverage region.
 
-Click a marker or use the accessible measurement selector to inspect direction, exact median/range, count, first/latest timestamps, and location quality. The selector also makes coincident markers individually accessible. Empty history and missing metrics explicitly say there are not enough measurements; request failures show a retry status. Requests refresh every 30 seconds while open and are cancelled when controls change or coverage closes. Selecting another node clears the overlay. Basemap style reloads restore markers.
+Click a marker or use the accessible measurement selector to inspect direction, median/range (median now approximate under Stage 4), count, first/latest timestamps, and location quality. The selector also makes coincident markers individually accessible. Empty history and missing metrics explicitly say there are not enough measurements; request failures show a retry status. Requests refresh every 30 seconds while open and are cancelled when controls change or coverage closes. Selecting another node clears the overlay. Basemap style reloads restore markers.
 
 The coverage panel replaces node details while open and shares the mobile observation area with packet chat. In phone landscape the two panels use separate columns; desktop chat narrows while coverage is open to avoid overlap. Closing coverage restores the normal layout.
 

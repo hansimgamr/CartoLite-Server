@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased — `quinte-deployment` fork
+## Unreleased — deployment fork (`feat/live-traces`)
+
+- Synchronize README, architecture, API, privacy, data sources, deployment, and coverage checkpoints with the deployed Stage 4 behavior; clarify approximate medians and the current packet-chat layout.
 
 - Keep manual scroll position in the lower-left live packet chat and add a green “Live” / red “Not live” control; clicking it or scrolling to the newest packet resumes auto-scrolling.
 

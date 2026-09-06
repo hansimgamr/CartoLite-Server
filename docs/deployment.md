@@ -177,3 +177,13 @@ holding public keys link back: a node's public id is `n-` followed by the first
 validated against that shape and otherwise ignored. It is applied once the map
 reports `idle`, because the style and layers must exist before a node can be
 selected.
+
+## Coverage history operations
+
+Stages 1–4 of [signal coverage](signal-coverage-plan.md) are deployed on `feat/live-traces`; implementation checkpoint `85a5fb4` includes persistent summaries. Keep the `/data` volume when recreating the service. On first upgrade, eligible retained packets seed the archive once. Reloads and graceful restarts preserve it; abrupt failure can lose the last five minutes of updates.
+
+Coverage retains at most seven days, subject to global caps of 30,000 five-minute location buckets, 500,000 occupied histogram bins, and 20,000 recent dedup identities. Capacity eviction can shorten retention. Protect checkpoint backups as private operational data. Preserve a backup before downgrading: older binaries may discard the coverage field when writing their checkpoint.
+
+After an upgrade, query `/api/signal-coverage` with a known public node ID, a direction, and a window. Check `schemaVersion: 2`, `bucketMinutes: 5`, `approximateMedian: true`, and the expected summaries. Compare a nonempty group before/after an orderly restart, allowing newly received samples. No new environment variables or services are required.
+
+The Stage 4 release passed Go tests/vet, 133 frontend tests, builds, and isolated MQTT integration/privacy smoke. Go race execution remains blocked by this Pi kernel's unsupported VMA range; rerun on a supported host. These are recorded release results, not checks rerun by documentation-only commits. Stage 5 prediction inputs and Stage 6 field validation remain outstanding.

@@ -15,9 +15,9 @@ sanitized public schema v2
 
 The engine owns nodes, private resolver indexes, routes, sequence numbers, and counters. MQTT callbacks normalize messages and enqueue bounded input. Slow SSE clients are disconnected instead of applying backpressure. Dirty public state is serialized at most once per second; durable state is checkpointed at most once every five minutes and on clean shutdown.
 
-Public routes are created only when path prefixes resolve unambiguously to forwarder-capable nodes with valid worldwide Web Mercator coordinates and RF evidence. Missing or ambiguous information fails closed and can produce only an observer point, never an invented route.
+Public routes are created only when path prefixes resolve unambiguously to forwarder-capable nodes with valid worldwide Web Mercator coordinates and RF evidence. Missing or ambiguous information leaves explicit gaps; independently verified adjacent links and known points remain visible, without inventing a route across those gaps.
 
-The checkpoint contains current topology and private resolver material needed after restart. It contains no traffic history, message text, credentials, or packet capture. It is mode `0600`, written through a same-directory temporary file, synced, and atomically renamed. Routes expire after 24 hours; unreferenced nodes expire after 30 days.
+The checkpoint contains current topology and private resolver material needed after restart. It also contains bounded sanitized observation history and measured-signal aggregates, but no message text, credentials, or raw packet capture. It is mode `0600`, written through a same-directory temporary file, synced, and atomically renamed. Routes expire after 24 hours; unreferenced nodes expire after 30 days.
 
 The browser treats `/api/state` as authoritative and `/api/events` as a bounded low-latency delta stream. Boot changes, sequence gaps, expired replay cursors, visibility resume, and network restoration trigger one coalesced state refresh and stream replacement.
 
@@ -27,3 +27,9 @@ MapLibre owns stable geography, nodes, heat, and route geometry. The historical 
 ## Saved observation history (September 2026)
 
 The operator-approved saved packet/radio history extends the earlier live-only design. See [Live Traces](live-traces.md) for the bounded seven-day / 10,000-observation archive, public `/api/packet-history` schema, optional RSSI/SNR and checkpoint durability. Only sanitized public observation metadata is retained; no message payloads or keys are added.
+
+## Measured signal archive
+
+The packet-history lock also protects incremental coverage histograms. `GET /api/signal-coverage` merges five-minute buckets for the selected public node, direction, and time window. Groups preserve both endpoint locations and location quality. The archive shares the existing atomic checkpoint; no database or separate service is needed.
+
+Seven-day retention is independent of the raw log count cap, but global bucket, histogram-bin, and dedup limits can shorten it. Medians are quantized; ranges remain exact. Exclusion diagnostics still scan retained raw observations. See [the coverage plan](signal-coverage-plan.md#stage-4-checkpoint--persistent-measured-history) for bounds, migration, durability, and measured Pi costs. Prediction is not implemented.

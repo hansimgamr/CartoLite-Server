@@ -45,8 +45,9 @@
 > the individual nodes and routes a reader came to look at. Both stay one tap
 > away, and a visitor's own stored choice always wins.
 >
-> See [Deployment](docs/deployment.md) for both. Everything else, including the
-> privacy boundary and the public API, is upstream's.
+> See [Deployment](docs/deployment.md) for configuration. The
+> privacy boundary is preserved. The active `feat/live-traces` branch also adds
+> sanitized observation history and measured signal coverage, documented below.
 
 ![CartoLite Server showing active MeshCore nodes and routes across the Great Lakes](docs/assets/cartolite-overview.webp)
 
@@ -84,7 +85,7 @@ CartoLite Server renders public MeshCore activity as a living map: packet trails
 
 ## Privacy is the product boundary
 
-The public API exposes only the minimum sanitized data needed to draw the live topology. CartoLite Server does **not** publish public keys, observer keys, raw paths, packet bodies, decoded messages, or resolver details. It includes no visitor analytics, accounts, chat, or message history.
+The public API exposes only the minimum sanitized data needed to draw the live topology. CartoLite Server does **not** publish public keys, observer keys, raw paths, packet bodies, decoded messages, or resolver details. It includes no visitor analytics, accounts, user messaging, or decoded message history. The packet chat displays sanitized reception metadata only.
 
 See the exact guarantees in the [privacy documentation](docs/privacy.md) and the stable [public API v2 contract](docs/public-api.md).
 
@@ -129,7 +130,7 @@ CartoLite Server does not publish a universal prebuilt image because each operat
 
 ## Project scope
 
-This repository contains the standalone server and browser map. It has no country boundary, default region allowlist, Android app, Labs, analytics, database, chat, history, or operator dashboard.
+This repository contains the standalone server and browser map. It has no country boundary, default region allowlist, Android app, Labs, analytics, database, user messaging, or operator dashboard. This fork retains bounded sanitized observation history and measured signal summaries.
 
 ## Documentation
 
@@ -139,6 +140,8 @@ This repository contains the standalone server and browser map. It has no countr
 - [Privacy boundary](docs/privacy.md)
 - [Public API v2](docs/public-api.md)
 - [Data sources](docs/data-sources.md)
+- [Live Traces and saved radio observations](docs/live-traces.md)
+- [Signal coverage stages and release checkpoints](docs/signal-coverage-plan.md)
 - [Sound and animation](docs/sound-and-animation.md)
 - [Security policy](SECURITY.md)
 
@@ -148,7 +151,7 @@ This repository contains the standalone server and browser map. It has no countr
 
 ## Saved packet and radio log
 
-The map now restores the latest 10,000 sanitized observations (up to seven days) across visits, including optional receiver RSSI/SNR. Collection continues on the server while you are away. The separate Latest packet card stays current even while the saved Log is paused. See [Live Traces](docs/live-traces.md) for retention, checkpoint durability, CSV export and mobile behaviour.
+The map now restores the latest 10,000 sanitized observations (up to seven days) across visits, including optional receiver RSSI/SNR. Collection continues on the server while you are away. The lower-left packet chat shows the latest 24 events; green **Live** follows arrivals and red **Not live** preserves manual scrolling. The duplicate right-side trace list is hidden. See [Live Traces](docs/live-traces.md) for retention, checkpoint durability, CSV export and mobile behaviour.
 
 ### Measured signal coverage
 

@@ -14,3 +14,7 @@ The atomic server checkpoint contains current topology and private resolver keys
 ## Saved observation history (September 2026)
 
 The operator-approved saved packet/radio history extends the earlier live-only design. See [Live Traces](live-traces.md) for the bounded seven-day / 10,000-observation archive, public `/api/packet-history` schema, optional RSSI/SNR and checkpoint durability. Only sanitized public observation metadata is retained; no message payloads or keys are added.
+
+## Measured signal summaries
+
+Coverage exposes public endpoint snapshots, reception counts/times, location quality, and RSSI/SNR statistics. Its bounded seven-day histogram archive and recent sanitized dedup identities share the private checkpoint. No payload hashes, decoded messages, or additional resolver keys are added. Coordinates are last-known reports, not verified receiver positions at reception time. These public measurements do not establish continuous coverage or delivery percentages.
