@@ -9,6 +9,25 @@ import type {
   StatusEventV2
 } from './types';
 
+export interface Diagnostics {
+  mqtt: { enabled: boolean; connected: boolean; subscribed: boolean; malformed: number; deniedRegions: number };
+  engine: { processed: number; dropped: number; queueDepth: number; queueHealthy: boolean; checkpointHealthy: boolean; publicNodes: number; publicRoutes: number };
+  sseClients: number;
+}
+
+export async function fetchDiagnostics(signal?: AbortSignal): Promise<Diagnostics> {
+  const response = await fetch('/api/diagnostics', {
+    cache: 'no-store',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+    signal
+  });
+  if (!response.ok) throw new Error('diagnostics request failed (' + response.status + ')');
+  const body = await response.json() as Diagnostics;
+  if (!body || typeof body !== 'object' || !body.mqtt || !body.engine) throw new Error('diagnostics response is invalid');
+  return body;
+}
+
 export async function fetchState(signal?: AbortSignal): Promise<StateV2> {
   const response = await fetch('/api/state', {
     cache: 'no-store',

@@ -698,3 +698,17 @@ button { font: inherit; }
 
 .known-path-marker { width: 28px; height: 28px; border: 2px solid #b9fff0; border-radius: 50%; color: #eafffa; background: #103c38; font: 700 12px/1 system-ui; box-shadow: 0 0 0 3px #071c22aa; cursor: pointer; }
 .known-path-marker:focus-visible { outline: 3px solid #ffd15a; outline-offset: 3px; }
+
+.diagnostics-panel{position:absolute;top:max(70px,calc(env(safe-area-inset-top) + 58px));right:max(12px,env(safe-area-inset-right));z-index:8;width:min(286px,calc(100vw - 24px));padding:12px 14px;color:var(--ink);font-size:11px}
+.diagnostics-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;font-size:12px}
+.diagnostics-state{color:var(--ink-2);font-weight:700}
+.diagnostics-state[data-state="healthy"]{color:var(--good-t)}
+.diagnostics-state[data-state="warning"]{color:var(--warn-t)}
+.diagnostics-state[data-state="offline"]{color:var(--bad-t)}
+.diagnostics-grid{display:grid;grid-template-columns:1fr auto;gap:5px 14px;color:var(--ink-2)}
+.diagnostics-grid strong{color:var(--ink);font-weight:650;text-align:right}
+.diagnostics-note{margin:9px 0 0;color:var(--ink-3);line-height:1.35}
+@media (max-width:700px){
+ .diagnostics-panel{top:max(116px,calc(env(safe-area-inset-top) + 104px));right:12px;width:min(250px,calc(100vw - 24px));padding:10px 12px}
+ .diagnostics-grid{grid-template-columns:1fr auto}
+}

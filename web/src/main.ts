@@ -1,7 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './styles.css';
 import { Marker, Popup } from 'maplibre-gl';
-import { fetchManualNodes, fetchPlannedDeployments, fetchState, LiveFeed, type PlannedDeployment } from './api';
+import { fetchDiagnostics, fetchManualNodes, fetchPlannedDeployments, fetchState, LiveFeed, type Diagnostics, type PlannedDeployment } from './api';
 import { setupAreaControls } from './areaControls';
 import { RouteSonifier, type SoundScene, type SoundStatus } from './audio';
 import {
@@ -31,6 +31,12 @@ import { TraceInspector } from './traceInspector';
 const appElement = required<HTMLElement>('app');
 const statusElement = required<HTMLElement>('status');
 const statusText = required<HTMLElement>('status-text');
+const diagnosticsState = required<HTMLElement>('diagnostics-state');
+const diagnosticsMqtt = required<HTMLElement>('diagnostics-mqtt');
+const diagnosticsProcessed = required<HTMLElement>('diagnostics-processed');
+const diagnosticsDropped = required<HTMLElement>('diagnostics-dropped');
+const diagnosticsPath = required<HTMLElement>('diagnostics-path');
+const diagnosticsNote = required<HTMLElement>('diagnostics-note');
 const trafficMeter = required<HTMLElement>('traffic-meter');
 const topbar = required<HTMLElement>('topbar');
 const mapElement = required<HTMLElement>('map');
@@ -239,6 +245,7 @@ async function start(): Promise<void> {
   wireStatusConsoleLink();
   let plannedMarkers: Marker[] = [];
   let plannedRefreshTimer: number | undefined;
+  let diagnosticsRefreshTimer: number | undefined;
   let mapView: LiveMap | undefined;
   let animator: PacketAnimator | undefined;
   let sonifier: RouteSonifier | undefined;
@@ -446,6 +453,7 @@ async function start(): Promise<void> {
     });
     window.addEventListener('beforeunload', () => {
       if (trafficWakeTimer !== undefined) window.clearTimeout(trafficWakeTimer);
+      if (diagnosticsRefreshTimer !== undefined) window.clearInterval(diagnosticsRefreshTimer);
       if (followTimer !== undefined) window.clearTimeout(followTimer);
       feed?.stop();
       store?.destroy();
@@ -455,6 +463,29 @@ async function start(): Promise<void> {
       mapView?.destroy();
       releaseScreenAwake();
     }, { once: true });
+
+    const renderDiagnostics = (data: Diagnostics): void => {
+      const mqtt = data.mqtt.enabled && data.mqtt.connected && data.mqtt.subscribed;
+      const healthy = mqtt && data.engine.queueHealthy && data.engine.checkpointHealthy && data.engine.dropped === 0;
+      diagnosticsState.textContent = healthy ? 'Healthy' : mqtt ? 'Needs attention' : 'Offline';
+      diagnosticsState.dataset.state = healthy ? 'healthy' : mqtt ? 'warning' : 'offline';
+      diagnosticsMqtt.textContent = mqtt ? 'Connected' : data.mqtt.enabled ? 'Disconnected' : 'Disabled';
+      diagnosticsProcessed.textContent = data.engine.processed.toLocaleString();
+      diagnosticsDropped.textContent = data.engine.dropped.toLocaleString();
+      diagnosticsPath.textContent = data.engine.queueHealthy && data.engine.checkpointHealthy ? 'Queue + checkpoint OK' : 'Check queue/checkpoint';
+      diagnosticsNote.textContent = data.mqtt.malformed || data.mqtt.deniedRegions
+        ? String(data.mqtt.malformed) + ' malformed · ' + String(data.mqtt.deniedRegions) + ' denied · updates every 30 seconds'
+        : 'No malformed or denied messages · ' + String(data.sseClients) + ' live viewers · updates every 30 seconds';
+    };
+    const refreshDiagnostics = (): void => {
+      void fetchDiagnostics().then(renderDiagnostics).catch(() => {
+        diagnosticsState.textContent = 'Unavailable';
+        diagnosticsState.dataset.state = 'offline';
+        diagnosticsNote.textContent = 'Diagnostics temporarily unavailable.';
+      });
+    };
+    refreshDiagnostics();
+    diagnosticsRefreshTimer = window.setInterval(refreshDiagnostics, 30_000);
 
     const [initial, manualNodes, plannedDeployments] = await Promise.all([
       fetchState(),
@@ -717,6 +748,7 @@ async function start(): Promise<void> {
     areaControls?.destroy();
     mapView?.destroy();
     if (plannedRefreshTimer !== undefined) window.clearInterval(plannedRefreshTimer);
+    if (diagnosticsRefreshTimer !== undefined) window.clearInterval(diagnosticsRefreshTimer);
     plannedMarkers.splice(0).forEach((marker) => marker.remove());
     statusElement.dataset.state = 'offline';
     statusText.textContent = 'Unavailable';

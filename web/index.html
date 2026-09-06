@@ -33,6 +33,19 @@
           </span>
         </div>
       </section>
+      <section id="diagnostics-panel" class="diagnostics-panel glass" aria-label="Feed diagnostics">
+        <header class="diagnostics-header">
+          <strong>Feed diagnostics</strong>
+          <span id="diagnostics-state" class="diagnostics-state" aria-live="polite">Checking…</span>
+        </header>
+        <div class="diagnostics-grid">
+          <span>MQTT</span><strong id="diagnostics-mqtt">—</strong>
+          <span>Packets processed</span><strong id="diagnostics-processed">—</strong>
+          <span>Dropped</span><strong id="diagnostics-dropped">—</strong>
+          <span>Data path</span><strong id="diagnostics-path">—</strong>
+        </div>
+        <p id="diagnostics-note" class="diagnostics-note">Updates every 30 seconds.</p>
+      </section>
       <section class="controls glass" aria-label="Map controls">
         <button id="follow-button" class="control-button" type="button" aria-pressed="false" title="Follow live packets">
           <span aria-hidden="true">◎</span><span>Live Follow</span>
