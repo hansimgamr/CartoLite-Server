@@ -2,6 +2,8 @@
 
 ## Unreleased — `quinte-deployment` fork
 
+- Keep manual scroll position in the lower-left live packet chat and add a red “Go to live” control for returning to the newest packet.
+
 - Complete the geographic-area Pi release checks; document the remaining
   extreme-scale software-rendering limitation without weakening its test.
   Make browser software rendering explicit and seed the scale fixture's camera
