@@ -177,10 +177,3 @@ To resume Stage 5, provide per-deployment radio settings (frequency, bandwidth, 
 
 The measured signal panel now includes a collapsed **Predicted coverage · optional operator setup** section. Ordinary readers can ignore it: measured coverage works automatically from retained RSSI/SNR. Operators may expand it to enter transmit power, antenna height/gain, cable loss, and receiver antenna height/gain. Values are required, validated as non-negative numbers, and stored in browser local storage under the selected public node ID so one repeater's hardware does not overwrite another's. The confirmed USA/Canada MeshCore preset (910.525 MHz, BW62.5, SF7, CR5) is shown as context. The form does not alter measured data or enable predictions; it reports that prediction remains disabled until the propagation model and terrain validation are complete.
 \n
-
-## Stage 5 runtime checkpoint — model implementation still gated
-
-A second Pi audit found no installed ITM/Longley–Rice executable and no terrain-processing runtime. The official NTIA implementation supports point-to-point prediction through a command-line driver, but requires an input file plus a PFL terrain profile and additional assumptions such as climate, refractivity, polarization, permittivity, conductivity, variability mode, and antenna heights. Those requirements are documented by NTIA; the MeshCore radio preset alone is not enough.
-
-The operator form is intentionally preparation only. Until an official ITM build is selected, its license/build path is verified for the hardened ARM64 image, terrain profiles are cached, and the missing assumptions have an explicit policy, the predicted layer remains disabled. Measured RSSI/SNR coverage continues to be the usable map feature. Next implementation work is to package and smoke-test the official NTIA driver with NRCan profiles in an isolated build, then expose predictions only after validation.
-\n
