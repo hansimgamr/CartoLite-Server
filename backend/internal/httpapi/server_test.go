@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/n30nex/cartolite-server/backend/internal/engine"
+	"github.com/n30nex/cartolite-server/backend/internal/mqtt"
 )
 
 func testHandler(t *testing.T, ready bool) http.Handler {
@@ -20,7 +21,7 @@ func testHandler(t *testing.T, ready bool) http.Handler {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := New(state, NewHub(state.BootID()), func() bool { return ready }, "test", "abc")
+	server, err := New(state, NewHub(state.BootID()), func() bool { return ready }, func() mqtt.Status { return mqtt.Status{Enabled: ready, Connected: ready, Subscribed: ready} }, "test", "abc")
 	if err != nil {
 		t.Fatal(err)
 	}

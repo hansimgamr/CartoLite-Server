@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/n30nex/cartolite-server/backend/internal/engine"
+	"github.com/n30nex/cartolite-server/backend/internal/mqtt"
 )
 
 // Docker copies web/dist into this directory before the Go build.
@@ -26,12 +27,13 @@ type Server struct {
 	engine    *engine.Engine
 	hub       *Hub
 	mqttReady func() bool
+	mqttStatus func() mqtt.Status
 	static    fs.FS
 	version   string
 	gitSHA    string
 }
 
-func New(engineState *engine.Engine, hub *Hub, mqttReady func() bool, version, gitSHA string) (*Server, error) {
+func New(engineState *engine.Engine, hub *Hub, mqttReady func() bool, mqttStatus func() mqtt.Status, version, gitSHA string) (*Server, error) {
 	assets, err := fs.Sub(embeddedStatic, "static")
 	if err != nil {
 		return nil, fmt.Errorf("open embedded frontend: %w", err)
@@ -39,7 +41,7 @@ func New(engineState *engine.Engine, hub *Hub, mqttReady func() bool, version, g
 	if _, err := fs.Stat(assets, "index.html"); err != nil {
 		return nil, fmt.Errorf("embedded frontend has no index.html: %w", err)
 	}
-	return &Server{engine: engineState, hub: hub, mqttReady: mqttReady, static: assets, version: version, gitSHA: gitSHA}, nil
+	return &Server{engine: engineState, hub: hub, mqttReady: mqttReady, mqttStatus: mqttStatus, static: assets, version: version, gitSHA: gitSHA}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -49,6 +51,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/state", s.state)
 	mux.HandleFunc("GET /api/route-history", s.routeHistory)
 	mux.HandleFunc("GET /api/packet-history", s.packetHistory)
+	mux.HandleFunc("GET /api/diagnostics", s.diagnostics)
 	mux.HandleFunc("GET /api/events", s.events)
 	mux.HandleFunc("/", s.frontend)
 	return securityHeaders(mux)
@@ -96,6 +99,32 @@ func (s *Server) routeHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, map[string]any{"schemaVersion": 1, "from": from, "to": to, "partial": true, "routes": result})
+}
+
+func (s *Server) diagnostics(w http.ResponseWriter, _ *http.Request) {
+ stats := s.engine.OperationalStats()
+ sseClients := 0
+ if s.hub != nil {
+  sseClients = s.hub.ClientCount()
+ }
+ mqttState := mqtt.Status{}
+ if s.mqttStatus != nil {
+  mqttState = s.mqttStatus()
+ }
+ w.Header().Set("Cache-Control", "no-store")
+ writeJSON(w, http.StatusOK, map[string]any{
+  "mqtt": mqttState,
+  "engine": map[string]any{
+   "processed": stats.Processed,
+   "dropped": s.engine.Dropped(),
+   "queueDepth": s.engine.QueueDepth(),
+   "queueHealthy": s.engine.QueueHealthy(),
+   "checkpointHealthy": s.engine.CheckpointHealthy(),
+   "publicNodes": stats.PublicNodes,
+   "publicRoutes": stats.PublicRoutes,
+  },
+  "sseClients": sseClients,
+ })
 }
 
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {

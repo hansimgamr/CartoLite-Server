@@ -71,7 +71,7 @@ func run() error {
 		ClientID: cfg.MQTTClientID, Username: cfg.MQTTUsername, Password: cfg.MQTTPassword, Regions: cfg.Regions,
 	}, log, state.Submit, state.SetFeed)
 	broker.Start(ctx)
-	api, err := httpapi.New(state, hub, broker.Ready, cfg.Version, cfg.GitSHA)
+	api, err := httpapi.New(state, hub, broker.Ready, broker.Status, cfg.Version, cfg.GitSHA)
 	if err != nil {
 		stop()
 		state.Wait()
