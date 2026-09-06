@@ -4,7 +4,7 @@ Add **Measured signal** to each repeater first, then introduce **Predicted cover
 
 ## Progress
 
-Stage 1 implemented and deployed: explicit final-hop measurement snapshots. Stage 2 summaries are implemented; Stage 3 map controls and markers are implemented; Stage 4 retention is next.
+Stage 1 implemented and deployed: explicit final-hop measurement snapshots. Stage 2 summaries are implemented; Stage 3 map controls and markers are next.
 
 Stage 1 checkpoint validation (2026-09-05): Go tests and vet passed; all 132 frontend tests and frontend/container builds passed; isolated synthetic MQTT integration/privacy smoke passed; `git diff --check` passed. Go race checks were attempted but cannot execute on the Pi kernel (`ThreadSanitizer: unsupported VMA range`, found 39, supports 48); rerun on a supported CI host. The deployed container is healthy. Initial direct service API verification found 2,866 retained observations, including four newly captured measurements with final transmitters. Public HTTPS verification from the Pi returned 403; direct service verification succeeded.
 At the Stage 1 checkpoint no coverage markers were enabled. Measured markers are now available (Stage 3), with persistent aggregates (Stage 4); prediction remains unimplemented. Earlier checkpoint sections below describe their original release behavior; Stage 4 supersedes raw-only summary retention and exact medians.

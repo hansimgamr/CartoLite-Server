@@ -1,4 +1,3 @@
-import { SignalCoverage } from './signalCoverage';
 import maplibregl, {
   type ExpressionSpecification,
   type GeoJSONSource,
@@ -193,7 +192,6 @@ export class LiveMap {
   private hillshadeVisible = false;
   private terrain3D = false;
   private terrainLayersReady = false;
-  private signalCoverage: SignalCoverage;
   private selectedNodeID: string | null = null;
   private selectedNodeLabel = '';
   private neighborNodeIDs: string[] = [];
@@ -259,7 +257,6 @@ export class LiveMap {
       renderWorldCopies: false,
       transformRequest: (url) => ({ url: cartoVectorRequestURL(url) })
     });
-    this.signalCoverage = new SignalCoverage(this.map, this.inspectorSheet.parentElement!);
     this.setTerrainGestures(false);
     this.container.dataset.routeRenderer = 'maplibre-webgl';
     this.updateRouteRepresentation();
@@ -930,7 +927,6 @@ export class LiveMap {
     this.map.off('webglcontextrestored', this.handleWebGLContextRestored);
     this.map.off('styledataloading', this.handleStyleLoading);
     this.map.off('style.load', this.handleStyleLoad);
-    this.signalCoverage.destroy();
     this.map.remove();
   }
 
@@ -1545,7 +1541,6 @@ export class LiveMap {
   }
 
   private handleMapClick(event: MapMouseEvent): void {
-    if (this.map.getLayer('signal-coverage') && this.map.queryRenderedFeatures(event.point, { layers: ['signal-coverage'] }).length) return;
     if (this.map.queryRenderedFeatures(event.point, { layers: [NODE_HIT_LAYER_ID] }).length > 0) {
       this.selectNode(event);
       return;
@@ -1578,7 +1573,6 @@ export class LiveMap {
   private setSelectedNode(nodeID: string | null, label = ''): void {
     if (this.selectedNodeID === nodeID && (!nodeID || !label || label === this.selectedNodeLabel)) return;
     this.clearRouteInspection();
-    this.signalCoverage.close();
     this.selectedNodeID = nodeID;
     this.selectedNodeLabel = nodeID ? label : '';
     this.container.dataset.selectedNodeId = nodeID ?? '';
@@ -1801,7 +1795,6 @@ export class LiveMap {
       onClose: () => this.clearNodeSelection(),
       onSelectNeighbor: (nodeID) => this.selectNodeByID(nodeID, true),
       statusConsoleOrigin: STATUS_CONSOLE_ORIGIN,
-      onCoverage: () => this.signalCoverage.show(model.node),
     });
     if (mobile) {
       this.closePopup(false);

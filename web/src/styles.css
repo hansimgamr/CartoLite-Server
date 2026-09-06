@@ -698,31 +698,3 @@ button { font: inherit; }
 
 .known-path-marker { width: 28px; height: 28px; border: 2px solid #b9fff0; border-radius: 50%; color: #eafffa; background: #103c38; font: 700 12px/1 system-ui; box-shadow: 0 0 0 3px #071c22aa; cursor: pointer; }
 .known-path-marker:focus-visible { outline: 3px solid #ffd15a; outline-offset: 3px; }
-
-.signal-coverage-panel { position:absolute; top:120px; right:12px; z-index:20; width:min(370px,calc(100vw - 24px)); max-height:calc(100dvh - 180px); overflow:auto; overscroll-behavior:contain; padding:14px; box-sizing:border-box; color:#d9e9ef; background:#08171ef5; border:1px solid #31535b; border-radius:14px; font:12px/1.5 system-ui; box-shadow:0 12px 36px #0005; }
-.signal-coverage-panel[hidden] { display:none; }
-.signal-coverage-panel header { display:flex; align-items:center; gap:12px; justify-content:space-between; }
-.signal-coverage-panel header strong { overflow-wrap:anywhere; }
-.signal-coverage-panel button { min-width:44px; min-height:44px; color:#bde6e3; background:transparent; border:1px solid #31535b; border-radius:8px; font-size:24px; cursor:pointer; }
-.signal-coverage-controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
-.signal-coverage-controls label:first-child { grid-column:1 / -1; }
-.signal-coverage-controls label { display:grid; gap:4px; min-width:0; color:#a4bec7; }
-.signal-coverage-panel select { width:100%; min-width:0; min-height:44px; padding:8px; color:#dcf6f0; background:#102830; border:1px solid #31535b; border-radius:8px; font:inherit; }
-.signal-coverage-panel option { color:#dcf6f0; background:#102830; }
-.signal-coverage-panel p { margin:10px 0; }
-.signal-coverage-panel p span { display:inline-block; border-left:4px solid; padding-left:6px; margin:4px 10px 4px 0; }
-.signal-coverage-panel small { display:block; color:#9cb5bf; }
-.signal-coverage-panel :focus-visible { outline:2px solid #59dfba; outline-offset:2px; }
-.coverage-open .node-inspector-sheet { display:none; }
-button.node-inspector-console-link { background:transparent; cursor:pointer; min-height:44px; }
-:root[data-view-class="mobile"] .map-observation-panels .signal-coverage-panel { flex:0 1 auto; max-height:55%; order:-1; padding:10px; }
-@media (orientation:landscape) and (max-height:520px) { :root[data-view-class="mobile"] .map-observation-panels .signal-coverage-panel { grid-column:1 / -1; grid-row:1; max-height:100%; } }
-
-:root:has(.coverage-open) .node-inspector-popup { display:none; }
-
-:root:not([data-view-class="mobile"]) .coverage-open .packet-ticker { width:min(912px,calc(100vw - 420px)); }
-@media (orientation:landscape) and (max-height:520px) {
-  :root[data-view-class="mobile"] .map-observation-panels.coverage-open { grid-template-columns:1fr 1fr; grid-template-rows:minmax(0,1fr); }
-  :root[data-view-class="mobile"] .map-observation-panels.coverage-open .signal-coverage-panel { grid-column:1; grid-row:1; height:100%; max-height:100%; }
-  :root[data-view-class="mobile"] .map-observation-panels.coverage-open .packet-ticker { grid-column:2; grid-row:1; max-height:100%; }
-}

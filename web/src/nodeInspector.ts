@@ -104,7 +104,6 @@ export function createNodeInspectorContent(
     mobile?: boolean;
     now?: number;
     onClose?: () => void;
-    onCoverage?: () => void;
     onSelectNeighbor: (nodeID: string) => void;
     /**
      * Origin of the companion status console. When set, the sheet offers a link
@@ -157,12 +156,6 @@ export function createNodeInspectorContent(
     root.append(link);
   }
 
-  if (options.onCoverage && (model.node.role === 'repeater' || model.node.role === 'room_server')) {
-    const coverage = ownerDocument.createElement('button');
-    coverage.type = 'button'; coverage.className = 'node-inspector-console-link';
-    coverage.textContent = 'Signal coverage'; coverage.onclick = options.onCoverage;
-    root.append(coverage);
-  }
   const heading = ownerDocument.createElement('h3');
   heading.textContent = model.neighbors.length === 0 ? 'No neighbours in this route window' : 'Neighbours · newest first';
   root.append(heading);
