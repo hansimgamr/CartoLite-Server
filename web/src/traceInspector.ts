@@ -97,7 +97,7 @@ export class TraceInspector {
     const wasLive = !previousChat || previousChat.scrollHeight - previousChat.scrollTop - previousChat.clientHeight < 8;
     const previousTop = previousChat?.scrollTop ?? 0;
     const heading = document.createElement('strong'); heading.textContent = this.connected ? '● Live packet chat · connected' : '○ Live packet chat · reconnecting';
-    const live = document.createElement('button'); live.type = 'button'; live.className = 'packet-chat-live'; live.textContent = 'Live'; live.title = 'Jump to the newest packet'; live.setAttribute('aria-label', 'Jump to newest packet'); live.disabled = wasLive;
+    const live = document.createElement('button'); live.type = 'button'; live.className = 'packet-chat-live'; live.textContent = 'Go to live'; live.title = 'Jump to the newest packet'; live.setAttribute('aria-label', 'Go to live, newest packet'); live.disabled = wasLive;
     const header = document.createElement('div'); header.className = 'packet-chat-header'; header.append(heading, live);
     const chat = document.createElement('div'); chat.className = 'packet-chat'; chat.setAttribute('role', 'log'); chat.setAttribute('aria-live', 'polite');
     live.addEventListener('click', () => { chat.scrollTop = chat.scrollHeight; });
