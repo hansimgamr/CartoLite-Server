@@ -80,3 +80,7 @@ optional and default to upstream behaviour.
 ### Signal coverage summaries (Stage 2)
 
 - Add bounded incoming/outgoing measured-signal summaries for 1h, 24h, and 7d, with exact median/range, reception counts, age, location quality, and exclusions. Keep distinct locations and receivers separate; collapse identical same-millisecond reception records. Map controls follow in Stage 3.
+
+### Signal coverage map (Stage 3)
+
+- Add measured signal controls and coloured point markers to the shared map, with labelled RSSI/SNR bands, sparse/location-age indicators, and accessible measurement details. Keep coverage and packet chat separate on mobile and restore node details when coverage closes.

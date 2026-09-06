@@ -4,7 +4,7 @@ Add **Measured signal** to each repeater first, then introduce **Predicted cover
 
 ## Progress
 
-Stage 1 implemented and deployed: explicit final-hop measurement snapshots. Stage 2 summaries are implemented; Stage 3 map controls and markers are next.
+Stage 1 implemented and deployed: explicit final-hop measurement snapshots. Stage 2 summaries are implemented; Stage 3 map controls and markers are implemented; Stage 4 retention is next.
 
 Checkpoint validation (2026-09-05): Go tests and vet passed; all 132 frontend tests and frontend/container builds passed; isolated synthetic MQTT integration/privacy smoke passed; `git diff --check` passed. Go race checks were attempted but cannot execute on the Pi kernel (`ThreadSanitizer: unsupported VMA range`, found 39, supports 48); rerun on a supported CI host. The deployed container is healthy. Initial direct service API verification found 2,866 retained observations, including four newly captured measurements with final transmitters. Public HTTPS verification from the Pi returned 403; direct service verification succeeded.
 No coverage markers or prediction layer are enabled yet.
@@ -134,3 +134,17 @@ All three parameters are required. Directions are `outgoing` (heard this repeate
 Regression checks cover statistics, independent metrics, directions, windows, location changes/age, future-location exclusion, duplicate reception, separate receivers, and invalid API parameters. Stage 3 should label sparse and stale groups separately and leave unmeasured space unknown.
 
 Stage 2 validation (2026-09-05): Go tests/vet, 132 frontend tests, frontend/container builds, and isolated MQTT integration/privacy smoke passed. Deployed container healthy. Independent Python comparison against 3,064 retained observations verified three returned groups across six direction/window queries, including exact median/min/max and counts. Race execution remains blocked by the Pi kernel VMA limitation documented above. Stage 3 is next.
+
+## Stage 3 checkpoint — measured map overlay
+
+Select a repeater or room server and choose **Signal coverage**. This uses the shared map implementation, including the normal map and Live Traces view. Choose **Heard this repeater** (markers at receivers) or **Heard by this repeater** (markers at transmitters), 1 hour/24 hours/7 days, and RSSI or SNR. The backend remains the source of the summary values.
+
+Markers show median signal using four labelled bands: RSSI below -120, -120 to -105, -105 to -90, and at least -90 dBm; SNR below -10, -10 to 0, 0 to 10, and at least 10 dB. These are display bands, not receiver sensitivity or delivery thresholds. A white ring indicates fewer than three metric readings; faded markers indicate stale or unknown-age locations. Only measured points are drawn, with no interpolated coverage region.
+
+Click a marker or use the accessible measurement selector to inspect direction, exact median/range, count, first/latest timestamps, and location quality. The selector also makes coincident markers individually accessible. Empty history and missing metrics explicitly say there are not enough measurements; request failures show a retry status. Requests refresh every 30 seconds while open and are cancelled when controls change or coverage closes. Selecting another node clears the overlay. Basemap style reloads restore markers.
+
+The coverage panel replaces node details while open and shares the mobile observation area with packet chat. In phone landscape the two panels use separate columns; desktop chat narrows while coverage is open to avoid overlap. Closing coverage restores the normal layout.
+
+Validation: 133 frontend tests, TypeScript/Vite build, Go tests/vet, container build, and isolated MQTT integration/privacy smoke passed. Browser checks cover desktop and portrait/landscape mobile, including the empty state and viewport bounds; a landscape grid issue found during review was corrected. The existing Pi race-check limitation remains (no backend changes in this stage).
+
+Final Stage 3 browser check: the corrected 844×390 landscape coverage panel measured 410×312 pixels, stayed within the viewport beside packet chat, and displayed a retained measurement group without JavaScript errors. Desktop 1440×900 and portrait 390×844 empty-state checks also stayed within bounds. Screenshots were reviewed locally and are not committed because they contain live labels. Service health is healthy. Stage 4 is next.
