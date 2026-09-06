@@ -109,3 +109,28 @@ export type HelloV2 = { seq: number; bootId: string };
 export type NodeEventV2 = { seq: number; node: NodeV2 };
 export type StatusEventV2 = { seq: number; status: StatusV2 };
 export type ResetV2 = { seq: number; bootId: string };
+
+export interface SignalStatsV2 { count: number; median: number; min: number; max: number; }
+export interface SignalSummaryV2 {
+  transmitter: EndpointV2;
+  receiver: EndpointV2;
+  locationQuality: 'last-known' | 'unknown-age' | 'stale';
+  samples: number;
+  firstAt: number;
+  lastAt: number;
+  ageMs: number;
+  rssi?: SignalStatsV2;
+  snr?: SignalStatsV2;
+}
+export interface SignalCoverageV2 {
+  schemaVersion: 2;
+  nodeId: string;
+  direction: 'incoming' | 'outgoing';
+  window: '1h' | '24h' | '7d';
+  from: number;
+  to: number;
+  partial: boolean;
+  unassigned: number;
+  excluded: Record<string, number>;
+  summaries: SignalSummaryV2[];
+}

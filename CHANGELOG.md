@@ -76,3 +76,7 @@ optional and default to upstream behaviour.
 ### Signal coverage foundation (Stage 1)
 
 - Preserve sanitized final-radio-hop measurements and last-known coordinate timestamps in packet history and live events. Exclude uncertain transmitter attribution; old packet history remains readable. See `docs/signal-coverage-plan.md` for limits and Stage 2.
+
+### Signal coverage summaries (Stage 2)
+
+- Add bounded incoming/outgoing measured-signal summaries for 1h, 24h, and 7d, with exact median/range, reception counts, age, location quality, and exclusions. Keep distinct locations and receivers separate; collapse identical same-millisecond reception records. Map controls follow in Stage 3.

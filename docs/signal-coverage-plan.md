@@ -4,7 +4,7 @@ Add **Measured signal** to each repeater first, then introduce **Predicted cover
 
 ## Progress
 
-Stage 1 implemented and deployed: explicit final-hop measurement snapshots. Stage 2 is next.
+Stage 1 implemented and deployed: explicit final-hop measurement snapshots. Stage 2 summaries are implemented; Stage 3 map controls and markers are next.
 
 Checkpoint validation (2026-09-05): Go tests and vet passed; all 132 frontend tests and frontend/container builds passed; isolated synthetic MQTT integration/privacy smoke passed; `git diff --check` passed. Go race checks were attempted but cannot execute on the Pi kernel (`ThreadSanitizer: unsupported VMA range`, found 39, supports 48); rerun on a supported CI host. The deployed container is healthy. Initial direct service API verification found 2,866 retained observations, including four newly captured measurements with final transmitters. Public HTTPS verification from the Pi returned 403; direct service verification succeeded.
 No coverage markers or prediction layer are enabled yet.
@@ -117,3 +117,20 @@ At every stage:
 - [NTIA Irregular Terrain Model / Longley–Rice](https://its.ntia.gov/software/itm/)
 - [ITU-R P.1812 propagation prediction](https://www.itu.int/rec/R-REC-P.1812/en)
 - [Semtech LoRa technical FAQ](https://www.semtech.com/design-support/faq/faq-lora)
+
+## Stage 2 checkpoint — measured summaries
+
+`GET /api/signal-coverage?node=n-...&direction=outgoing&window=24h`
+
+All three parameters are required. Directions are `outgoing` (heard this repeater) and `incoming` (heard by this repeater); windows are `1h`, `24h`, `7d`. The endpoint is available for public node IDs, including companion nodes, without inventing reverse-direction readings. An unknown ID returns an empty list. Responses are uncached and derived from bounded saved history; `partial: true` always applies. There is no map UI change until Stage 3.
+
+- Group by transmitter/receiver IDs, both coordinate snapshots, and location quality. Position changes are separate groups, never merged into an artificial measurement location.
+- `samples`, `firstAt`, `lastAt`, and `ageMs` describe retained reception records. RSSI (dBm) and SNR (dB) independently provide count, exact median, minimum, and maximum. An absent metric stays absent; it is not zero.
+- `locationQuality` is `last-known`, `unknown-age` when either report timestamp is missing, or `stale` when either report predates reception by more than 24 hours. This threshold is a display flag, not an RF accuracy guarantee. Locations reported after a packet are excluded.
+- `excluded` counts selected-node records with an unattributed transmitter, a newer-than-packet location, missing radio readings, or duplicate reception. `unassigned` counts window-wide records whose selected endpoint cannot be established; it must not be presented as that node's missing traffic. Historical packets without measurements cannot be assigned safely.
+- Duplicate detection collapses matching transmitter, receiver, millisecond timestamp, kind, RSSI, and SNR. Separate receivers and separate timestamps count independently. No raw data or packet hashes are retained or exposed. This conservative rule can collapse two indistinguishable receptions within one millisecond; copies with changed timestamps cannot be detected. Counts are not unique transmissions or delivery percentages.
+- The query scans at most 10,000 retained records and sorts values for exact statistics. No cache/database/dependency is added. Stage 4 will extend retention using persistent aggregates.
+
+Regression checks cover statistics, independent metrics, directions, windows, location changes/age, future-location exclusion, duplicate reception, separate receivers, and invalid API parameters. Stage 3 should label sparse and stale groups separately and leave unmeasured space unknown.
+
+Stage 2 validation (2026-09-05): Go tests/vet, 132 frontend tests, frontend/container builds, and isolated MQTT integration/privacy smoke passed. Deployed container healthy. Independent Python comparison against 3,064 retained observations verified three returned groups across six direction/window queries, including exact median/min/max and counts. Race execution remains blocked by the Pi kernel VMA limitation documented above. Stage 3 is next.

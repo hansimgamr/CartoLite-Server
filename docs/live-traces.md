@@ -32,3 +32,5 @@ Packet path fitting reserves space for the desktop log panel and the mobile obse
 ## Signal measurement foundation
 
 New packet records may include a `measurement` receiver and safely resolved final transmitter, with last-known location timestamps. RSSI/SNR apply only to that reception. Older history is not backfilled. See [the coverage plan](signal-coverage-plan.md) for attribution rules, limitations, and staged delivery.
+
+Stage 2 adds `/api/signal-coverage` with required `node`, `direction=incoming|outgoing`, and `window=1h|24h|7d`. It returns exact retained signal summaries with sample counts, age, location flags, and exclusions. See [the coverage plan](signal-coverage-plan.md) for duplicate and retention limits.
