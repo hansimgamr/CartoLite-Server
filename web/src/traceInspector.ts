@@ -97,10 +97,18 @@ export class TraceInspector {
     const wasLive = !previousChat || previousChat.scrollHeight - previousChat.scrollTop - previousChat.clientHeight < 8;
     const previousTop = previousChat?.scrollTop ?? 0;
     const heading = document.createElement('strong'); heading.textContent = this.connected ? '● Live packet chat · connected' : '○ Live packet chat · reconnecting';
-    const live = document.createElement('button'); live.type = 'button'; live.className = 'packet-chat-live'; live.textContent = 'Go to live'; live.title = 'Jump to the newest packet'; live.setAttribute('aria-label', 'Go to live, newest packet'); live.disabled = wasLive;
+    const live = document.createElement('button'); live.type = 'button'; live.className = 'packet-chat-live';
     const header = document.createElement('div'); header.className = 'packet-chat-header'; header.append(heading, live);
     const chat = document.createElement('div'); chat.className = 'packet-chat'; chat.setAttribute('role', 'log'); chat.setAttribute('aria-live', 'polite');
-    live.addEventListener('click', () => { chat.scrollTop = chat.scrollHeight; });
+    const updateLive = (): void => {
+      const following = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 8;
+      live.textContent = following ? 'Live' : 'Not live';
+      live.title = following ? 'Auto-scrolling with new packets' : 'Return to newest packet and resume auto-scrolling';
+      live.setAttribute('aria-label', live.title);
+      live.setAttribute('aria-pressed', String(following));
+    };
+    chat.addEventListener('scroll', updateLive, { passive: true });
+    live.addEventListener('click', () => { chat.scrollTop = chat.scrollHeight; updateLive(); });
     for (const packet of packets) {
       const kind = normalizePacketKind(packet.payloadType);
       const message = document.createElement('div'); message.className = 'packet-chat-message'; message.style.setProperty('--packet-color', PACKET_KIND_COLORS[kind]);
@@ -117,6 +125,7 @@ export class TraceInspector {
     } else signal.textContent = 'Waiting for an observation';
     this.ticker.replaceChildren(header, chat, signal);
     chat.scrollTop = wasLive ? chat.scrollHeight : previousTop;
+    updateLive();
   }
 
   private setView(log: boolean): void {
