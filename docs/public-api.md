@@ -89,26 +89,3 @@ New observations include optional `path` (ordered steps containing a sanitized `
 The log, latest-packet card and CSV show the known path with ellipses for gaps. Selecting an event numbers its known map positions; Show known path fits them. Only adjacent, uniquely resolved, positioned endpoints passing the existing RF/distance checks produce mapped links. Animation/replay splits disconnected fragments even in the All traffic view and never crosses a gap. Older saved observer events still show the receiving node; missing historical path details cannot be reconstructed.
 
 Mapped segments may include `breakBefore: true` to start a separate fragment after an unresolved interval, even if two fragments meet at the same known node. Consumers must not animate continuously across that boundary.
-
-## Measured signal coverage
-
-`GET /api/signal-coverage?node=n-...&direction=outgoing&window=24h` requires all three parameters. Direction is `incoming` or `outgoing`; window is `1h`, `24h`, or `7d`. Invalid parameters return 400. An unknown valid public node ID returns empty summaries. Responses use `Cache-Control: no-store`.
-
-| Field | Meaning |
-|---|---|
-| `schemaVersion`, `nodeId`, `direction`, `window` | Version 2 and the requested selection. |
-| `from`, `to` | Unix milliseconds; `from` is rounded down to a five-minute boundary. |
-| `partial` | Always true: received observations cannot establish complete coverage or delivery rate. |
-| `bucketMinutes`, `approximateMedian` | 5 and true. |
-| `summaries` | Groups containing `transmitter` and `receiver` public endpoint snapshots, `locationQuality`, `samples`, `firstAt`, `lastAt`, `ageMs`, and optional `rssi` / `snr`. |
-| `rssi`, `snr` within a summary | Independent `{count, median, min, max}` statistics, in dBm / dB. Median uses 1 dB / 0.25 dB bins; min/max remain exact. Missing metrics are omitted. |
-| `locationQuality` | `last-known`, `unknown-age`, or `stale` (a location report more than 24 hours before reception). |
-| `exclusionScope` | `retained-raw-history`; diagnostics do not cover the full aggregate archive. |
-| `excluded` | Selected-node raw-record counts by `unattributed-transmitter`, `location-newer-than-packet`, `missing-radio`, or `duplicate-reception`. |
-| `unassigned` | Window-wide raw records whose selected endpoint is unknown; not a selected node's missing traffic. |
-
-Outgoing selects the transmitter and plots receivers; incoming selects the receiver and plots transmitters. RSSI/SNR apply only to the verified final reception. Both endpoint coordinates and location quality define a group, so moved locations remain separate. Diagnostic counts use the requested window before bucket rounding. A bucket with a future latest reception is withheld until that timestamp.
-
-Packet SSE and saved observations optionally include `measurement: {receiver, transmitter?, receiverLocationAt?, transmitterLocationAt?, locationQuality: "last-known"}`. Location timestamps are Unix milliseconds; absent values mean unknown report age. A receiver-only snapshot cannot supply pairwise coverage. The optional packet-level `rssi` and `snr` describe this reception, not every path segment. Older observations are not backfilled.
-
-See [coverage retention and duplicate limits](signal-coverage-plan.md#stage-4-checkpoint--persistent-measured-history).
