@@ -72,3 +72,7 @@ optional and default to upstream behaviour.
 - Keep safe links on both sides of unknown hops; show explicit gaps, isolated known nodes and names without map coordinates.
 - Retain public partial-path metadata across visits/restarts and show it in the log, latest packet, CSV and selected map markers.
 - Split animation/replay at gaps. Earlier records display their known receiver without inventing missing path history.
+
+### Signal coverage foundation (Stage 1)
+
+- Preserve sanitized final-radio-hop measurements and last-known coordinate timestamps in packet history and live events. Exclude uncertain transmitter attribution; old packet history remains readable. See `docs/signal-coverage-plan.md` for limits and Stage 2.

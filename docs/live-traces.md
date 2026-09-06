@@ -28,3 +28,7 @@ New observations include optional `path` (ordered steps containing a sanitized `
 The log, latest-packet card and CSV show the known path with ellipses for gaps. Selecting an event numbers its known map positions; Show known path fits them. Only adjacent, uniquely resolved, positioned endpoints passing the existing RF/distance checks produce mapped links. Animation/replay splits disconnected fragments even in the All traffic view and never crosses a gap. Older saved observer events still show the receiving node; missing historical path details cannot be reconstructed.
 
 Packet path fitting reserves space for the desktop log panel and the mobile observation panels, including single known-node events. Live verification on September 5 confirmed a real partial Text path with numbered nodes 2, 3, 5 through 9 and an explicit unknown hop at position 4.
+
+## Signal measurement foundation
+
+New packet records may include a `measurement` receiver and safely resolved final transmitter, with last-known location timestamps. RSSI/SNR apply only to that reception. Older history is not backfilled. See [the coverage plan](signal-coverage-plan.md) for attribution rules, limitations, and staged delivery.

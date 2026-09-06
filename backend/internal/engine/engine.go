@@ -277,12 +277,13 @@ func (e *Engine) process(message mqtt.Message) bool {
 	}
 	payloadKind := meshcore.PayloadName(packet.PayloadType)
 	segments, path := e.resolveAndRecord(message, packet, source, observer, payloadKind)
+	measurement := e.signalMeasurement(message, packet, source, observer, segments)
 	routed := len(segments) > 0
 	if routed {
-		e.emitPacket(message.HeardAt, payloadKind, segments, nil, path, message.RSSI, message.SNR)
+		e.emitPacket(message.HeardAt, payloadKind, segments, nil, path, measurement, message.RSSI, message.SNR)
 	} else if observer != nil && observer.HasCoords {
 		endpoint := endpointFor(observer)
-		e.emitPacket(message.HeardAt, payloadKind, nil, &endpoint, path, message.RSSI, message.SNR)
+		e.emitPacket(message.HeardAt, payloadKind, nil, &endpoint, path, measurement, message.RSSI, message.SNR)
 	}
 	return changed || observerChanged || routed || (observer != nil && observer.HasCoords)
 }
@@ -464,7 +465,10 @@ func (e *Engine) upsertNode(region, key, name, role string, observer bool, lat, 
 			topologyChanged = true
 		}
 	}
-	if hasCoords && validCoords(lat, lng) && (!node.HasCoords || node.Lat != lat || node.Lng != lng) {
+	if hasCoords && validCoords(lat, lng) && seenAt >= node.CoordsAt {
+		node.CoordsAt = seenAt
+	}
+	if hasCoords && validCoords(lat, lng) && seenAt >= node.CoordsAt && (!node.HasCoords || node.Lat != lat || node.Lng != lng) {
 		node.Lat, node.Lng, node.HasCoords = lat, lng, true
 		changed = true
 		topologyChanged = true
@@ -490,7 +494,7 @@ func shouldPublishFreshness(node *privateNode, at int64) bool {
 	return at > node.LastPublished && (node.LastPublished == 0 || at-node.LastPublished >= nodeFreshnessEventEvery.Milliseconds())
 }
 
-func (e *Engine) emitPacket(at int64, payloadType string, segments []RouteSegmentV2, observer *EndpointV2, path []PathStepV2, radio ...*float64) {
+func (e *Engine) emitPacket(at int64, payloadType string, segments []RouteSegmentV2, observer *EndpointV2, path []PathStepV2, measurement *SignalMeasurementV2, radio ...*float64) {
 	seq := e.seq.Add(1)
 	mode := "route"
 	if observer != nil {
@@ -502,7 +506,7 @@ func (e *Engine) emitPacket(at int64, payloadType string, segments []RouteSegmen
 			partial = true
 		}
 	}
-	event := PacketEventV2{Path: path, Partial: partial, Seq: seq, ID: opaqueID("p", e.bootID+"|"+strconv.FormatUint(seq, 10)), At: at, PayloadType: payloadType, Mode: mode, Segments: segments, Observer: observer}
+	event := PacketEventV2{Measurement: measurement, Path: path, Partial: partial, Seq: seq, ID: opaqueID("p", e.bootID+"|"+strconv.FormatUint(seq, 10)), At: at, PayloadType: payloadType, Mode: mode, Segments: segments, Observer: observer}
 	if len(radio) == 2 {
 		event.RSSI = safeRadio(radio[0], -200, 0)
 		event.SNR = safeRadio(radio[1], -100, 100)

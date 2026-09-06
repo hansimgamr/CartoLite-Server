@@ -2,6 +2,25 @@
 
 Add **Measured signal** to each repeater first, then introduce **Predicted coverage** once the inputs and measurements are available to validate it.
 
+## Progress
+
+Stage 1 implemented and deployed: explicit final-hop measurement snapshots. Stage 2 is next.
+
+Checkpoint validation (2026-09-05): Go tests and vet passed; all 132 frontend tests and frontend/container builds passed; isolated synthetic MQTT integration/privacy smoke passed; `git diff --check` passed. Go race checks were attempted but cannot execute on the Pi kernel (`ThreadSanitizer: unsupported VMA range`, found 39, supports 48); rerun on a supported CI host. The deployed container is healthy. Initial direct service API verification found 2,866 retained observations, including four newly captured measurements with final transmitters. Public HTTPS verification from the Pi returned 403; direct service verification succeeded.
+No coverage markers or prediction layer are enabled yet.
+
+### Stage 1 data audit and attribution contract
+
+- MQTT normalization accepts RSSI/SNR, reporting receiver identity, optional coordinates, and a packet timestamp within five minutes of arrival (otherwise server arrival time). RSSI/SNR describe reception at that receiver, never all links in a route.
+- New public packet/history records optionally include `measurement`: receiver snapshot, optional transmitter snapshot, coordinate-report timestamps, and `locationQuality: last-known`. The packet's `at`, `rssi`, and `snr` apply to this reception. Only sanitized public node IDs and labels are exposed.
+- Resolve the actual last packet-path identity, requiring a unique match across all node roles and a forwarding role. For zero-hop packets, use the existing source identity resolver. Require the final transmitter-to-receiver segment to pass existing route gates. Earlier unknown hops do not disqualify an otherwise known final hop; a final gap cannot borrow an earlier segment.
+- Receiver-only measurements remain unattributed and must be excluded from pairwise coverage summaries. Missing RF yields no measurement. Packets without a located receiver cannot supply coverage measurements; the existing packet display may still show earlier mapped segments.
+- Coordinates are snapshots of the latest report known during ingestion, not proof of location at packet time. `receiverLocationAt` and `transmitterLocationAt` identify those reports; absent timestamps mean unknown age (including topology loaded from older checkpoints). Stage 2 must flag missing, stale, or newer-than-packet reports. Do not interpolate locations or imply GPS accuracy.
+- Incoming/outgoing views will select the receiver/transmitter respectively; this does not establish a reverse-direction measurement.
+- Older packets without `measurement` stay readable but are excluded from verified coverage. Their paths may collapse duplicate nodes and route records do not explicitly establish receiver identity, so backfilling would risk incorrect attribution.
+- Retention remains 10,000 observations or seven days, whichever comes first. Persistent long-term summaries are Stage 4. Duplicate reception handling is Stage 2; raw counts must not yet be advertised as unique transmissions or delivery rates.
+- Synthetic regression coverage checks final-hop attribution across earlier gaps, unresolved final hops, identity collisions, missing RF, immutable location snapshots, restart persistence, and checkpoint endpoint validation.
+
 ## Stage 1 — Verify and preserve measurement data
 
 Audit incoming MQTT observations and saved history for receiver identity, coordinates, RSSI, SNR, timestamp, and immediate transmitting node.
