@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased — deployment fork (`feat/live-traces`)
+## Unreleased
+
+- Add a visible, mobile-sized **Feed diagnostics** panel to the map. It refreshes every 30 seconds and reports MQTT state, processed/dropped packets, queue/checkpoint health, malformed and denied message counts, and current SSE viewers. The panel uses the sanitized /api/diagnostics contract; raw packets, hashes, and keys remain private.
+
+ — deployment fork (`feat/live-traces`)
 
 - Synchronize README, architecture, API, privacy, data sources, deployment, and coverage checkpoints with the deployed Stage 4 behavior; clarify approximate medians and the current packet-chat layout.
 

@@ -153,4 +153,4 @@ The map now restores the latest 10,000 sanitized observations (up to seven days)
 
 ## Diagnostics
 
-GET /api/diagnostics returns sanitized MQTT and engine health counters for operators. Raw packets, hashes, and keys remain private.
+The map's **Feed diagnostics** panel uses GET /api/diagnostics and refreshes every 30 seconds. It summarizes MQTT connection state, processed and dropped packets, queue/checkpoint health, malformed and denied message counts, and active SSE viewers. The endpoint and panel never expose raw packets, hashes, or keys.
