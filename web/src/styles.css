@@ -713,10 +713,6 @@ button { font: inherit; }
 .signal-coverage-panel p span { display:inline-block; border-left:4px solid; padding-left:6px; margin:4px 10px 4px 0; }
 .signal-coverage-panel small { display:block; color:#9cb5bf; }
 .signal-prediction-inputs { margin-top:14px; padding-top:12px; border-top:1px solid #31535b; display:grid; gap:6px; }
-.signal-prediction-inputs summary { cursor:pointer; color:#dcf6f0; font-weight:700; padding:4px 0; }
-.signal-prediction-inputs summary::marker { color:#59dfba; }
-.signal-prediction-inputs[open] { padding-bottom:2px; }
-
 .signal-prediction-inputs > strong { color:#dcf6f0; }
 .signal-prediction-inputs > small { color:#9cb5bf; }
 .signal-prediction-form { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }

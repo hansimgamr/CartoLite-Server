@@ -16,7 +16,7 @@ export class SignalCoverage {
   private status = document.createElement('p');
   private legend = document.createElement('p');
   private detail = document.createElement('div');
-  private prediction = document.createElement('details');
+  private prediction = document.createElement('section');
   private predictionStatus = document.createElement('p');
   private predictionInputs: Record<string, HTMLInputElement> = {};
   private list = document.createElement('select');
@@ -44,9 +44,8 @@ export class SignalCoverage {
     this.metric.onchange = () => this.draw();
     this.list.setAttribute('aria-label','Inspect measurement location'); this.list.onchange = () => this.inspect(Number(this.list.value));
     this.prediction.className = 'signal-prediction-inputs';
-    const predictionSummary = document.createElement('summary'); predictionSummary.textContent = 'Predicted coverage · optional operator setup';
-    const predictionHeading = document.createElement('strong'); predictionHeading.textContent = 'Measured coverage works automatically';
-    const predictionNote = document.createElement('small'); predictionNote.textContent = 'Most people can ignore this. Only operators who want a modelled forecast need to enter hardware details.';
+    const predictionHeading = document.createElement('strong'); predictionHeading.textContent = 'Prediction inputs · this repeater';
+    const predictionNote = document.createElement('small'); predictionNote.textContent = 'Values vary by hardware. Saved only in this browser; measured data above is unchanged.';
     const predictionForm = document.createElement('form'); predictionForm.className = 'signal-prediction-form';
     const fields: [string,string,string,string][] = [
       ['txPower','Transmit power','dBm','1'], ['antennaHeight','Antenna height','m','0'],
@@ -62,7 +61,7 @@ export class SignalCoverage {
     const save = document.createElement('button'); save.type = 'submit'; save.textContent = 'Save inputs';
     this.predictionStatus.className = 'signal-prediction-status'; this.predictionStatus.setAttribute('role','status');
     predictionForm.append(radio, save); predictionForm.onsubmit = (event) => { event.preventDefault(); this.savePredictionInputs(); };
-    this.prediction.append(predictionSummary, predictionHeading, predictionNote, predictionForm, this.predictionStatus);
+    this.prediction.append(predictionHeading, predictionNote, predictionForm, this.predictionStatus);
     this.status.setAttribute('role','status');
     this.root.append(header, controls, this.legend, this.status, this.list, this.detail, this.prediction);
     parent.append(this.root);
@@ -88,7 +87,7 @@ export class SignalCoverage {
   private inputKey(): string { return 'cartolite-signal-inputs:' + (this.node?.id ?? ''); }
   private loadPredictionInputs(): void {
     for (const input of Object.values(this.predictionInputs)) input.value = '';
-    this.predictionStatus.textContent = 'Measured coverage is ready. Predicted coverage is optional.';
+    this.predictionStatus.textContent = 'Prediction is waiting for these hardware values.';
     try {
       const raw = localStorage.getItem(this.inputKey()); if (!raw) return;
       const values = JSON.parse(raw) as Record<string, unknown>;
