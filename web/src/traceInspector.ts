@@ -93,8 +93,14 @@ export class TraceInspector {
   private renderTicker(): void {
     const packets = this.store.all().map(row => row.packet).slice(-24);
     const latest = packets.at(-1);
+    const previousChat = this.ticker.querySelector('.packet-chat') as HTMLElement | null;
+    const wasLive = !previousChat || previousChat.scrollHeight - previousChat.scrollTop - previousChat.clientHeight < 8;
+    const previousTop = previousChat?.scrollTop ?? 0;
     const heading = document.createElement('strong'); heading.textContent = this.connected ? '● Live packet chat · connected' : '○ Live packet chat · reconnecting';
+    const live = document.createElement('button'); live.type = 'button'; live.className = 'packet-chat-live'; live.textContent = 'Live'; live.title = 'Jump to the newest packet'; live.setAttribute('aria-label', 'Jump to newest packet'); live.disabled = wasLive;
+    const header = document.createElement('div'); header.className = 'packet-chat-header'; header.append(heading, live);
     const chat = document.createElement('div'); chat.className = 'packet-chat'; chat.setAttribute('role', 'log'); chat.setAttribute('aria-live', 'polite');
+    live.addEventListener('click', () => { chat.scrollTop = chat.scrollHeight; });
     for (const packet of packets) {
       const kind = normalizePacketKind(packet.payloadType);
       const message = document.createElement('div'); message.className = 'packet-chat-message'; message.style.setProperty('--packet-color', PACKET_KIND_COLORS[kind]);
@@ -109,8 +115,8 @@ export class TraceInspector {
       signal.textContent = `Latest ${ago} · ${radioLabel(latest)}`;
       signal.title = new Date(latest.at).toLocaleString();
     } else signal.textContent = 'Waiting for an observation';
-    this.ticker.replaceChildren(heading, chat, signal);
-    chat.scrollTop = chat.scrollHeight;
+    this.ticker.replaceChildren(header, chat, signal);
+    chat.scrollTop = wasLive ? chat.scrollHeight : previousTop;
   }
 
   private setView(log: boolean): void {
